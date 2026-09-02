@@ -37,7 +37,7 @@ export function LanguageSwitcher({ currentLocale }: LanguageSwitcherProps) {
   };
 
   return (
-    <div className="flex items-center gap-1 rounded-xl border border-[#24314c] bg-[#101622] p-1 text-xs">
+    <div className="flex items-center gap-1 rounded-xl glass p-1 text-xs">
       <button
         type="button"
         onClick={() => handleSwitch("en")}

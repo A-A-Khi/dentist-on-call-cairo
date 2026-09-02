@@ -84,7 +84,7 @@ export default function SettingsPage() {
 
             <form onSubmit={handleSave} className="space-y-6">
               {activeTab === "account" && (
-                <div className="rounded-2xl border border-[#24314c] bg-[#101622] p-5 sm:p-6 space-y-4">
+                <div className="glass-card rounded-2xl p-5 sm:p-6 space-y-4">
                   <h3 className="text-sm font-semibold text-[#f8fafc]">Account Credentials</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <Input label="Display Name" defaultValue="Clinic Administrator" />
@@ -96,7 +96,7 @@ export default function SettingsPage() {
               )}
 
               {activeTab === "clinic" && (
-                <div className="rounded-2xl border border-[#24314c] bg-[#101622] p-5 sm:p-6 space-y-4">
+                <div className="glass-card rounded-2xl p-5 sm:p-6 space-y-4">
                   <h3 className="text-sm font-semibold text-[#f8fafc]">Clinic Organization Profile</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <Input label="Clinic Legal Name" defaultValue="Dentist on Call Cairo" />
@@ -111,7 +111,7 @@ export default function SettingsPage() {
               )}
 
               {activeTab === "appearance" && (
-                <div className="rounded-2xl border border-[#24314c] bg-[#101622] p-5 sm:p-6 space-y-4">
+                <div className="glass-card rounded-2xl p-5 sm:p-6 space-y-4">
                   <h3 className="text-sm font-semibold text-[#f8fafc]">Appearance & Localization</h3>
                   <div className="space-y-3 text-xs">
                     <div>
@@ -124,7 +124,7 @@ export default function SettingsPage() {
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-[#94a3b8] mb-1.5">Default Language</label>
-                      <select className="rounded-xl border border-[#24314c] bg-[#151d2c] px-3.5 py-2 text-xs text-[#f8fafc] focus:border-[#caa95a] focus:outline-none">
+                      <select className="glass rounded-xl px-3.5 py-2 text-xs text-[#f8fafc] focus:border-[#caa95a] focus:outline-none">
                         <option>English (LTR)</option>
                         <option>العربية (Arabic RTL)</option>
                       </select>
@@ -134,7 +134,7 @@ export default function SettingsPage() {
               )}
 
               {activeTab === "notifications" && (
-                <div className="rounded-2xl border border-[#24314c] bg-[#101622] p-5 sm:p-6 space-y-4">
+                <div className="glass-card rounded-2xl p-5 sm:p-6 space-y-4">
                   <h3 className="text-sm font-semibold text-[#f8fafc]">Notification Preferences</h3>
                   <div className="space-y-3 text-xs">
                     <label className="flex items-center gap-3 cursor-pointer">

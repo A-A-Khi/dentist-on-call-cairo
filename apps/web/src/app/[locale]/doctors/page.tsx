@@ -55,7 +55,7 @@ export default function DoctorsPage() {
             doctors.map((doc) => (
               <div
                 key={doc.id}
-                className="rounded-2xl border border-[#24314c] bg-[#101622] p-5 space-y-4 shadow-md"
+                className="glass-card rounded-2xl p-5 space-y-4 shadow-md"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
@@ -80,12 +80,12 @@ export default function DoctorsPage() {
                 </div>
 
                 {/* Productivity KPIs */}
-                <div className="grid grid-cols-2 gap-3 pt-2 border-t border-[#24314c]/60">
-                  <div className="rounded-xl border border-[#24314c] bg-[#151d2c] p-3 text-center">
+                <div className="grid grid-cols-2 gap-3 pt-2 border-t glass-divider/60">
+                  <div className="glass rounded-xl p-3 text-center">
                     <span className="text-[11px] text-[#94a3b8] block">{dict.doctors.activePatients}</span>
                     <span className="text-base font-bold text-[#f8fafc] mt-0.5 block">{doc.activePatients}</span>
                   </div>
-                  <div className="rounded-xl border border-[#24314c] bg-[#151d2c] p-3 text-center">
+                  <div className="glass rounded-xl p-3 text-center">
                     <span className="text-[11px] text-[#94a3b8] block">{dict.doctors.monthlyVisits}</span>
                     <span className="text-base font-bold text-[#caa95a] mt-0.5 block">{doc.completedVisitsThisMonth}</span>
                   </div>

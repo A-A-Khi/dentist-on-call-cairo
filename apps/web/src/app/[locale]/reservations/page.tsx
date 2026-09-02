@@ -64,7 +64,7 @@ export default function ReservationsPage() {
           <div className="flex items-center gap-2">
             <Link
               href={`/${locale}/calendar`}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-[#24314c] bg-[#101622] px-3.5 py-2 text-xs font-medium text-[#f8fafc] hover:bg-[#151d2c] transition-colors"
+              className="inline-flex items-center gap-1.5 glass rounded-xl px-3.5 py-2 text-xs font-medium text-[#f8fafc] glass-hover transition-colors"
             >
               <svg className="h-4 w-4 text-[#caa95a]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -75,20 +75,20 @@ export default function ReservationsPage() {
         </div>
 
         {/* Filters */}
-        <div className="flex flex-col sm:flex-row items-center gap-3 rounded-2xl border border-[#24314c] bg-[#101622] p-3">
+        <div className="flex flex-col sm:flex-row items-center gap-3 glass-card rounded-2xl p-3">
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={locale === "ar" ? "البحث بالاسم، كود المريض، أو الإجراء..." : "Search reservations by patient, code, or procedure..."}
-            className="w-full sm:flex-1 rounded-xl border border-[#24314c] bg-[#151d2c] px-3.5 py-2 text-xs text-[#f8fafc] placeholder-[#64748b] focus:border-[#caa95a] focus:outline-none"
+            className="w-full sm:flex-1 glass rounded-xl px-3.5 py-2 text-xs text-[#f8fafc] placeholder-[#64748b] focus:border-[#caa95a] focus:outline-none"
           />
 
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="rounded-xl border border-[#24314c] bg-[#151d2c] px-3 py-2 text-xs text-[#f8fafc] focus:border-[#caa95a] focus:outline-none w-full sm:w-auto"
+              className="glass rounded-xl px-3 py-2 text-xs text-[#f8fafc] focus:border-[#caa95a] focus:outline-none w-full sm:w-auto"
             >
               <option value="ALL">{dict.reservations.filterStatus}: {locale === "ar" ? "الكل" : "All"}</option>
               <option value="CONFIRMED">{locale === "ar" ? "مؤكد" : "Confirmed"}</option>
@@ -100,11 +100,11 @@ export default function ReservationsPage() {
         </div>
 
         {/* Reservations Table Container */}
-        <div className="rounded-2xl border border-[#24314c] bg-[#101622] overflow-hidden">
+        <div className="glass-card rounded-2xl overflow-hidden">
           {/* Desktop Table View */}
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left rtl:text-right text-xs">
-              <thead className="border-b border-[#24314c] bg-[#151d2c]/80 text-[#94a3b8]">
+              <thead className="glass-table-header text-[#94a3b8]">
                 <tr>
                   <th className="px-4 py-3.5 font-medium">{locale === "ar" ? "كود الحجز" : "Booking ID"}</th>
                   <th className="px-4 py-3.5 font-medium">{locale === "ar" ? "المريض" : "Patient"}</th>
@@ -124,7 +124,7 @@ export default function ReservationsPage() {
                   </tr>
                 ) : filtered.length > 0 ? (
                   filtered.map((r) => (
-                    <tr key={r.id} className="hover:bg-[#151d2c]/40 transition-colors">
+                    <tr key={r.id} className="glass-hover transition-colors">
                       <td className="px-4 py-3.5 font-mono text-[#caa95a] font-medium">{r.id.slice(0, 8).toUpperCase()}</td>
                       <td className="px-4 py-3.5">
                         <Link

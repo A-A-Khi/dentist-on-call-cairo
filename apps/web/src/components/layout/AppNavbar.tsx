@@ -80,7 +80,7 @@ export function AppNavbar({
 
   return (
     <>
-      <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-[#24314c] bg-[#0a0d14]/95 px-3 sm:px-6 backdrop-blur-md">
+      <header className="glass-nav sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b px-3 sm:px-6">
         {/* Brand & Context */}
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           {/* Mobile hamburger menu toggle */}
@@ -88,7 +88,7 @@ export function AppNavbar({
             type="button"
             onClick={() => setMobileMenuOpen(true)}
             aria-label="Open Navigation Menu"
-            className="flex md:hidden items-center justify-center h-9 w-9 rounded-xl border border-[#24314c] bg-[#101622] text-[#94a3b8] hover:text-[#f8fafc] shrink-0"
+            className="glass flex md:hidden items-center justify-center h-9 w-9 rounded-xl text-[#94a3b8] hover:text-[#f8fafc] shrink-0"
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
@@ -130,7 +130,7 @@ export function AppNavbar({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={locale === "ar" ? "بحث سريع (DOC-XXXXXX)..." : "Quick patient search (DOC-ID)..."}
-              className="w-full rounded-xl border border-[#24314c] bg-[#101622] py-1.5 ps-9 pe-3 text-xs text-[#f8fafc] placeholder-[#64748b] focus:border-[#caa95a] focus:outline-none focus:ring-1 focus:ring-[#caa95a]"
+              className="glass-input w-full rounded-xl py-1.5 ps-9 pe-3 text-xs text-[#f8fafc] placeholder-[#64748b] focus:outline-none focus:ring-1 focus:ring-[#caa95a]"
             />
             <div className="pointer-events-none absolute inset-y-0 start-0 flex items-center ps-2.5 text-[#64748b]">
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -149,7 +149,7 @@ export function AppNavbar({
             <button
               type="button"
               onClick={() => setShowNotifications(!showNotifications)}
-              className="relative rounded-xl border border-[#24314c] bg-[#101622] p-2 text-[#94a3b8] hover:text-[#f8fafc] transition-colors"
+              className="glass relative rounded-xl p-2 text-[#94a3b8] hover:text-[#f8fafc] transition-colors"
               title="Notifications"
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -163,8 +163,8 @@ export function AppNavbar({
             </button>
 
             {showNotifications && (
-              <div className="absolute end-0 mt-2 w-72 sm:w-80 max-w-[90vw] rounded-2xl border border-[#24314c] bg-[#101622] p-4 shadow-2xl shadow-black/90 z-50">
-                <div className="flex items-center justify-between pb-2 border-b border-[#24314c]">
+              <div className="glass-popover absolute end-0 mt-2 w-72 sm:w-80 max-w-[90vw] rounded-2xl p-4 z-50">
+                <div className="flex items-center justify-between pb-2 border-b glass-divider">
                   <h4 className="text-xs font-semibold text-[#f8fafc]">
                     {locale === "ar" ? "الإشعارات" : "Notifications"}
                   </h4>
@@ -172,7 +172,7 @@ export function AppNavbar({
                     {unreadCount > 0 ? `${unreadCount} new` : locale === "ar" ? "محدثة بالكامل" : "All caught up"}
                   </span>
                 </div>
-                <div className="divide-y divide-[#24314c]/50 mt-2">
+                <div className="divide-y divide-white/10 mt-2">
                   <div className="py-6 text-center text-xs text-[#64748b]">
                     {locale === "ar" ? "لا توجد إشعارات جديدة حالياً" : "No notifications right now"}
                   </div>
@@ -198,7 +198,7 @@ export function AppNavbar({
             type="button"
             onClick={handleLogout}
             disabled={isLoggingOut}
-            className="flex items-center gap-1.5 rounded-xl border border-[#24314c] bg-[#101622] px-2.5 sm:px-3 py-1.5 text-xs font-medium text-[#94a3b8] transition-all hover:border-rose-500/40 hover:bg-rose-950/20 hover:text-rose-300 disabled:opacity-50"
+            className="glass flex items-center gap-1.5 rounded-xl px-2.5 sm:px-3 py-1.5 text-xs font-medium text-[#94a3b8] transition-all hover:border-rose-500/40 hover:bg-rose-950/20 hover:text-rose-300 disabled:opacity-50"
             title={logoutText}
           >
             <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -219,10 +219,10 @@ export function AppNavbar({
           />
 
           {/* Drawer Sheet */}
-          <div className="relative z-10 w-72 max-w-[85vw] bg-[#0d121c] border-e border-[#24314c] flex flex-col justify-between h-full p-4 overflow-y-auto shadow-2xl">
+          <div className="glass-sidebar relative z-10 w-72 max-w-[85vw] border-e flex flex-col justify-between h-full p-4 overflow-y-auto">
             <div className="space-y-4">
               {/* Drawer Header */}
-              <div className="flex items-center justify-between pb-3 border-b border-[#24314c]">
+              <div className="flex items-center justify-between pb-3 border-b glass-divider">
                 <div className="flex items-center gap-2">
                   <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-[#dfbf70] to-[#99782a] text-[#0a0d14] font-bold">
                     DOC
@@ -236,7 +236,7 @@ export function AppNavbar({
                 <button
                   type="button"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="rounded-lg p-1.5 text-[#94a3b8] hover:text-[#f8fafc] hover:bg-[#151d2c]"
+                  className="rounded-lg p-1.5 text-[#94a3b8] glass-hover hover:text-[#f8fafc]"
                 >
                   <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
@@ -251,7 +251,7 @@ export function AppNavbar({
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder={locale === "ar" ? "بحث سريع..." : "Quick patient search..."}
-                  className="w-full rounded-xl border border-[#24314c] bg-[#151d2c] py-2 ps-9 pe-3 text-xs text-[#f8fafc] placeholder-[#64748b] focus:border-[#caa95a] focus:outline-none"
+                  className="glass-input w-full rounded-xl py-2 ps-9 pe-3 text-xs text-[#f8fafc] placeholder-[#64748b] focus:outline-none focus:ring-1 focus:ring-[#caa95a]"
                 />
                 <div className="pointer-events-none absolute inset-y-0 start-0 flex items-center ps-2.5 text-[#64748b]">
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -275,8 +275,8 @@ export function AppNavbar({
                       onClick={() => setMobileMenuOpen(false)}
                       className={`flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs font-medium transition-all ${
                         isActive
-                          ? "bg-[#caa95a]/15 text-[#f5e8c7] border border-[#caa95a]/30 font-semibold"
-                          : "text-[#94a3b8] hover:bg-[#151d2c] hover:text-[#f8fafc]"
+                          ? "glass-active text-[#f5e8c7] font-semibold"
+                          : "text-[#94a3b8] glass-hover hover:text-[#f8fafc]"
                       }`}
                     >
                       <span>{link.name}</span>
@@ -287,7 +287,7 @@ export function AppNavbar({
             </div>
 
             {/* Drawer Footer */}
-            <div className="pt-4 border-t border-[#24314c] space-y-3">
+            <div className="pt-4 border-t glass-divider space-y-3">
               <button
                 type="button"
                 onClick={handleLogout}

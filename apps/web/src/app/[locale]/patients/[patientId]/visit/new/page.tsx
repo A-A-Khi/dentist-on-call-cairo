@@ -184,7 +184,7 @@ export default function NewVisitPage() {
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 pb-32 md:pb-20">
           <div className="max-w-4xl mx-auto space-y-6">
             {/* Top Navigation & Context Banner */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#24314c]">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b glass-divider">
               <div>
                 <div className="flex items-center gap-2 text-xs text-[#94a3b8] mb-1">
                   <Link href={`/${locale}/patients`} className="hover:text-[#caa95a] transition-colors">
@@ -217,7 +217,7 @@ export default function NewVisitPage() {
             </div>
 
             {/* Section 1: Chief Complaint */}
-            <div className="rounded-2xl border border-[#24314c] bg-[#101622] p-5 sm:p-6 space-y-3">
+            <div className="glass-card rounded-2xl p-5 sm:p-6 space-y-3">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-sm font-semibold text-[#f8fafc]">
@@ -241,7 +241,7 @@ export default function NewVisitPage() {
                     key={i}
                     type="button"
                     onClick={() => setChiefComplaint((prev) => (prev ? `${prev}. ${sym}` : sym))}
-                    className="rounded-lg border border-[#24314c] bg-[#151d2c] px-2.5 py-1 text-[11px] text-[#94a3b8] hover:border-[#caa95a]/50 hover:text-[#f8fafc] transition-colors"
+                    className="rounded-lg glass px-2.5 py-1 text-[11px] text-[#94a3b8] hover:border-[#caa95a]/50 hover:text-[#f8fafc] transition-colors"
                   >
                     + {sym}
                   </button>
@@ -257,7 +257,7 @@ export default function NewVisitPage() {
             </div>
 
             {/* Section 2: Clinical Findings & Diagnosis */}
-            <div className="rounded-2xl border border-[#24314c] bg-[#101622] p-5 sm:p-6 space-y-4">
+            <div className="glass-card rounded-2xl p-5 sm:p-6 space-y-4">
               <h3 className="text-sm font-semibold text-[#f8fafc]">
                 2. {locale === "ar" ? "الفحص السريري والتشخيص الطبي (Examination & Diagnosis)" : "Clinical Examination & Diagnosis"}
               </h3>
@@ -281,7 +281,7 @@ export default function NewVisitPage() {
             </div>
 
             {/* Section 3: Procedures Executed & Price List Catalog */}
-            <div className="rounded-2xl border border-[#24314c] bg-[#101622] p-5 sm:p-6 space-y-4">
+            <div className="glass-card rounded-2xl p-5 sm:p-6 space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <h3 className="text-sm font-semibold text-[#f8fafc]">
@@ -298,7 +298,7 @@ export default function NewVisitPage() {
                   <button
                     type="button"
                     onClick={addManualProcedure}
-                    className="rounded-xl border border-[#24314c] bg-[#151d2c] px-3 py-1.5 text-xs font-semibold text-[#94a3b8] hover:text-[#f8fafc] hover:border-[#caa95a]/40 transition-colors"
+                    className="glass rounded-xl px-3 py-1.5 text-xs font-semibold text-[#94a3b8] hover:text-[#f8fafc] hover:border-[#caa95a]/40 transition-colors"
                   >
                     + {locale === "ar" ? "إجراء يدوي بسعر مخصص" : "Manual / Custom Procedure"}
                   </button>
@@ -306,7 +306,7 @@ export default function NewVisitPage() {
               </div>
 
               {/* Price List Catalog Quick Selector */}
-              <div className="rounded-xl border border-[#24314c]/80 bg-[#151d2c]/60 p-3 space-y-2">
+              <div className="glass rounded-xl p-3 space-y-2">
                 <label className="block text-[11px] font-semibold text-[#caa95a]">
                   {locale === "ar" ? "📋 اختيار سريع من لائحة أسعار العيادة الرسمية:" : "📋 Quick Add from Standard Dental Fee Schedule:"}
                 </label>
@@ -320,7 +320,7 @@ export default function NewVisitPage() {
                         e.target.value = "";
                       }
                     }}
-                    className="w-full rounded-xl border border-[#24314c] bg-[#101622] px-3 py-2 text-xs text-[#f8fafc] focus:border-[#caa95a] focus:outline-none"
+                    className="w-full glass rounded-xl px-3 py-2 text-xs text-[#f8fafc] focus:border-[#caa95a] focus:outline-none"
                   >
                     <option value="" disabled>
                       {locale === "ar" ? "-- اضغط لاختيار إجراء من لائحة الأسعار --" : "-- Select procedure from price list catalog --"}
@@ -374,7 +374,7 @@ export default function NewVisitPage() {
               {/* Active Procedures List */}
               <div className="space-y-3 pt-2">
                 {procedures.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-[#24314c] p-6 text-center text-xs text-[#64748b]">
+                  <div className="glass-card rounded-xl border-dashed p-6 text-center text-xs text-[#64748b]">
                     {locale === "ar"
                       ? "لم يتم تحديد أي إجراءات بعد. اختر إجراءً من اللائحة أعلاه أو أضف إجراءً مخصصاً."
                       : "No procedures cataloged yet. Select from the fee schedule above or add a manual custom procedure."}
@@ -383,7 +383,7 @@ export default function NewVisitPage() {
                   procedures.map((p) => (
                     <div
                       key={p.id}
-                      className="rounded-xl border border-[#24314c] bg-[#151d2c] p-3.5 space-y-3"
+                      className="glass rounded-xl p-3.5 space-y-3"
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
@@ -416,7 +416,7 @@ export default function NewVisitPage() {
                             type="text"
                             value={p.name}
                             onChange={(e) => updateProcedure(p.id, { name: e.target.value })}
-                            className="w-full rounded-lg border border-[#24314c] bg-[#101622] px-3 py-1.5 text-xs text-[#f8fafc] focus:border-[#caa95a] focus:outline-none font-medium"
+                            className="w-full rounded-lg glass px-3 py-1.5 text-xs text-[#f8fafc] focus:border-[#caa95a] focus:outline-none font-medium"
                           />
                         </div>
 
@@ -429,7 +429,7 @@ export default function NewVisitPage() {
                             value={p.tooth}
                             onChange={(e) => updateProcedure(p.id, { tooth: e.target.value })}
                             placeholder="e.g. #36 or Universal"
-                            className="w-full rounded-lg border border-[#24314c] bg-[#101622] px-3 py-1.5 text-xs text-[#f8fafc] font-mono focus:border-[#caa95a] focus:outline-none"
+                            className="w-full rounded-lg glass px-3 py-1.5 text-xs text-[#f8fafc] font-mono focus:border-[#caa95a] focus:outline-none"
                           />
                         </div>
 
@@ -443,7 +443,7 @@ export default function NewVisitPage() {
                             step={50}
                             value={p.cost}
                             onChange={(e) => updateProcedure(p.id, { cost: Number(e.target.value) || 0 })}
-                            className="w-full rounded-lg border border-[#24314c] bg-[#101622] px-3 py-1.5 text-xs text-[#f8fafc] font-mono font-bold focus:border-[#caa95a] focus:outline-none text-emerald-400"
+                            className="w-full rounded-lg glass px-3 py-1.5 text-xs text-[#f8fafc] font-mono font-bold focus:border-[#caa95a] focus:outline-none text-emerald-400"
                           />
                         </div>
                       </div>
@@ -454,7 +454,7 @@ export default function NewVisitPage() {
                 {/* Financial Ledger Attestation Card */}
                 {procedures.length > 0 && (
                   <div className="rounded-2xl border border-[#caa95a]/40 bg-gradient-to-br from-[#caa95a]/10 via-[#151d2c] to-[#101622] p-4 space-y-2 shadow-xl">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#24314c] pb-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b glass-divider pb-3">
                       <div>
                         <span className="text-xs font-semibold text-[#caa95a] block">
                           {locale === "ar" ? "الأثر المالي المباشر للجلسة:" : "Session Financial Settlement Impact:"}
@@ -486,7 +486,7 @@ export default function NewVisitPage() {
             </div>
 
             {/* Section 4: Prescriptions & Doctor Notes */}
-            <div className="rounded-2xl border border-[#24314c] bg-[#101622] p-5 sm:p-6 space-y-4">
+            <div className="glass-card rounded-2xl p-5 sm:p-6 space-y-4">
               <h3 className="text-sm font-semibold text-[#f8fafc]">
                 4. {locale === "ar" ? "الوصفة الطبية وتوصيات الرعاية المنزلية" : "Prescriptions & Home Care Instructions"}
               </h3>
@@ -513,7 +513,7 @@ export default function NewVisitPage() {
       </div>
 
       {/* Sticky Bottom Action Bar */}
-      <div className="fixed bottom-0 inset-x-0 z-30 border-t border-[#24314c] bg-[#0a0d14]/95 px-4 py-3 backdrop-blur-md">
+      <div className="fixed bottom-0 inset-x-0 z-30 border-t glass-divider bg-[#0a0d14]/95 px-4 py-3 backdrop-blur-md">
         <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
           <div className="text-xs">
             <span className="text-[#94a3b8]">{locale === "ar" ? "توثيق لجلسة: " : "Documenting: "}</span>
@@ -526,7 +526,7 @@ export default function NewVisitPage() {
           <div className="flex items-center gap-3">
             <Link
               href={`/${locale}/patients/${patient.code}`}
-              className="rounded-xl border border-[#24314c] bg-[#151d2c] px-3 py-1.5 text-xs font-medium text-[#94a3b8] hover:text-[#f8fafc] transition-colors"
+              className="glass rounded-xl px-3 py-1.5 text-xs font-medium text-[#94a3b8] hover:text-[#f8fafc] transition-colors"
             >
               {locale === "ar" ? "إلغاء" : "Cancel"}
             </Link>

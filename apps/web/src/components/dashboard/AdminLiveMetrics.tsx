@@ -94,7 +94,7 @@ export function AdminLiveMetrics({ locale, dict }: AdminLiveMetricsProps) {
           <Card key={idx} variant="elevated" className="p-5">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-[#94a3b8]">{stat.label}</span>
-              <div className="rounded-xl border border-[#24314c] bg-[#101622] p-2">
+              <div className="glass rounded-xl p-2">
                 {stat.icon}
               </div>
             </div>
@@ -125,7 +125,7 @@ export function AdminLiveMetrics({ locale, dict }: AdminLiveMetricsProps) {
             <div className="hidden sm:block overflow-x-auto">
               <table className="w-full text-left rtl:text-right text-xs">
                 <thead>
-                  <tr className="border-b border-[#24314c] text-[#64748b]">
+                  <tr className="border-b glass-divider text-[#64748b]">
                     <th className="pb-3 font-medium">{dict.dashboard.todaySchedule.time}</th>
                     <th className="pb-3 font-medium">{dict.dashboard.todaySchedule.patient}</th>
                     <th className="pb-3 font-medium">{dict.dashboard.todaySchedule.doctor}</th>
@@ -136,7 +136,7 @@ export function AdminLiveMetrics({ locale, dict }: AdminLiveMetricsProps) {
                 <tbody className="divide-y divide-[#24314c]/50">
                   {appointments.length > 0 ? (
                     appointments.slice(0, 5).map((row, idx) => (
-                      <tr key={idx} className="hover:bg-[#151d2c]/60 transition-colors">
+                      <tr key={idx} className="glass-hover transition-colors">
                         <td className="py-3.5 font-medium text-[#caa95a]">{row.time}</td>
                         <td className="py-3.5">
                           <div className="font-semibold text-[#f8fafc]">{row.patientName}</div>
@@ -218,7 +218,7 @@ export function AdminLiveMetrics({ locale, dict }: AdminLiveMetricsProps) {
                 patients.slice(0, 3).map((p, idx) => (
                   <div
                     key={idx}
-                    className="rounded-xl border border-[#24314c] bg-[#0d121c] p-3 text-xs space-y-1.5"
+                    className="glass-card rounded-xl p-3 text-xs space-y-1.5"
                   >
                     <div className="flex items-center justify-between">
                       <Badge variant="gold" size="sm">
@@ -238,7 +238,7 @@ export function AdminLiveMetrics({ locale, dict }: AdminLiveMetricsProps) {
               )}
             </div>
 
-            <div className="mt-4 pt-4 border-t border-[#24314c] text-center">
+            <div className="mt-4 pt-4 border-t glass-divider text-center">
               <Link
                 href={`/${locale}/activity`}
                 className="text-xs text-[#caa95a] hover:underline"

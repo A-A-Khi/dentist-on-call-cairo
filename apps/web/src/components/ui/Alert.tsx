@@ -13,10 +13,10 @@ export function Alert({
   ...props
 }: AlertProps) {
   const variantStyles = {
-    info: "bg-sky-950/40 border-sky-500/30 text-sky-200",
-    success: "bg-emerald-950/40 border-emerald-500/30 text-emerald-200",
-    warning: "bg-amber-950/40 border-amber-500/30 text-amber-200",
-    error: "bg-rose-950/40 border-rose-500/30 text-rose-200",
+    info: "glass bg-sky-500/10 border-sky-500/30 text-sky-200",
+    success: "glass bg-emerald-500/10 border-emerald-500/30 text-emerald-200",
+    warning: "glass bg-amber-500/10 border-amber-500/30 text-amber-200",
+    error: "glass bg-rose-500/10 border-rose-500/30 text-rose-200",
   };
 
   const iconStyles = {

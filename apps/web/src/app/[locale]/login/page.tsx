@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { LanguageSwitcher } from "../../../components/layout/LanguageSwitcher";
+import { GlassBackground } from "../../../components/layout/GlassBackground";
 import { Input } from "../../../components/ui/Input";
 import { Button } from "../../../components/ui/Button";
 import { Card } from "../../../components/ui/Card";
@@ -95,11 +96,7 @@ export default function LoginPage() {
 
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center p-4 selection:bg-[#caa95a] selection:text-[#0a0d14]">
-      {/* Background ambient lighting */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-[#caa95a]/10 blur-3xl" />
-        <div className="absolute -bottom-40 left-1/4 h-80 w-80 rounded-full bg-sky-500/5 blur-3xl" />
-      </div>
+      <GlassBackground />
 
       {/* Top right language switcher */}
       <div className="absolute top-6 end-6 z-20">
@@ -128,7 +125,7 @@ export default function LoginPage() {
         </div>
 
         {/* Login Card */}
-        <Card variant="gold-bordered" className="p-8 backdrop-blur-xl">
+        <Card variant="gold-bordered" className="p-8">
           <div className="mb-6 space-y-1">
             <h2 className="text-lg font-semibold text-[#f8fafc]">{t.title}</h2>
             <p className="text-xs text-[#64748b]">{t.subtitle}</p>
@@ -169,7 +166,7 @@ export default function LoginPage() {
                   type="checkbox"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
-                  className="rounded border-[#24314c] bg-[#101622] text-[#caa95a] focus:ring-[#caa95a]"
+                  className="rounded border-white/10 glass-input text-[#caa95a] focus:ring-[#caa95a]"
                 />
                 <span>{t.rememberMe}</span>
               </label>
@@ -194,20 +191,20 @@ export default function LoginPage() {
           </form>
 
           {/* Quick Demo Credentials */}
-          <div className="mt-6 pt-5 border-t border-[#24314c] space-y-2">
+          <div className="mt-6 pt-5 border-t glass-divider space-y-2">
             <p className="text-[11px] text-[#64748b] text-center">Development quick credentials:</p>
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
                 onClick={handleFillAdmin}
-                className="rounded-lg border border-[#24314c] bg-[#151d2c] px-2.5 py-1.5 text-[11px] font-medium text-[#caa95a] hover:bg-[#caa95a]/10 hover:border-[#caa95a]/30 transition-all"
+                className="rounded-lg glass px-2.5 py-1.5 text-[11px] font-medium text-[#caa95a] hover:bg-[#caa95a]/10 hover:border-[#caa95a]/30 transition-all"
               >
                 {t.demoAdmin}
               </button>
               <button
                 type="button"
                 onClick={handleFillDoctor}
-                className="rounded-lg border border-[#24314c] bg-[#151d2c] px-2.5 py-1.5 text-[11px] font-medium text-sky-400 hover:bg-sky-500/10 hover:border-sky-500/30 transition-all"
+                className="rounded-lg glass px-2.5 py-1.5 text-[11px] font-medium text-sky-400 hover:bg-sky-500/10 hover:border-sky-500/30 transition-all"
               >
                 {t.demoDoctor}
               </button>

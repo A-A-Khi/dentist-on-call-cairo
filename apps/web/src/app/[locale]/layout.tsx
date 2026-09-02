@@ -25,7 +25,7 @@ export default async function LocaleLayout({
 
   return (
     <html lang={locale} dir={dir} className="dark">
-      <body className="min-h-screen bg-[#0a0d14] text-[#f8fafc] antialiased selection:bg-[#caa95a] selection:text-[#0a0d14]">
+      <body className="min-h-screen antialiased selection:bg-[#caa95a] selection:text-[#0a0d14]">
         <LocaleDirSync locale={locale} dir={dir} />
         {children}
       </body>

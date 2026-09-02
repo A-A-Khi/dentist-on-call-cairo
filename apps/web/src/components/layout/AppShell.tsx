@@ -2,6 +2,7 @@ import React from "react";
 import { AppNavbar } from "./AppNavbar";
 import { AppSidebar } from "./AppSidebar";
 import { MobileNav } from "./MobileNav";
+import { GlassBackground } from "./GlassBackground";
 import { getDictionarySync } from "../../i18n/get-dictionary";
 
 export interface AppShellProps {
@@ -18,7 +19,9 @@ export function AppShell({
   const dict = getDictionarySync(locale);
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#080a0f] text-[#f8fafc] selection:bg-[#caa95a] selection:text-[#080a0f]">
+    <div className="relative flex min-h-screen flex-col text-[#f8fafc] selection:bg-[#caa95a] selection:text-[#080a0f]">
+      <GlassBackground />
+
       {/* Top Header */}
       <AppNavbar
         locale={locale}

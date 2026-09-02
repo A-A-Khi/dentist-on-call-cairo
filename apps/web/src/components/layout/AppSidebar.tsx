@@ -178,7 +178,7 @@ export function AppSidebar({ locale, role, dict }: AppSidebarProps) {
   const items = role === "DOCTOR" ? doctorNav : adminNav;
 
   return (
-    <aside className="hidden md:flex w-60 shrink-0 border-e border-[#24314c] bg-[#0d121c] p-4 flex-col justify-between">
+    <aside className="glass-sidebar hidden md:flex w-60 shrink-0 border-e p-4 flex-col justify-between">
       <div className="space-y-1">
         <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-[#64748b]">
           {role === "DOCTOR" ? "Clinical Care" : "Operations"}
@@ -191,8 +191,8 @@ export function AppSidebar({ locale, role, dict }: AppSidebarProps) {
               href={item.href}
               className={`flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs font-medium transition-all ${
                 isActive
-                  ? "bg-[#caa95a]/15 text-[#f5e8c7] border border-[#caa95a]/30 font-semibold"
-                  : "text-[#94a3b8] hover:bg-[#151d2c] hover:text-[#f8fafc]"
+                  ? "glass-active text-[#f5e8c7] font-semibold"
+                  : "text-[#94a3b8] glass-hover hover:text-[#f8fafc]"
               }`}
             >
               <span className={isActive ? "text-[#caa95a]" : "text-[#64748b]"}>{item.icon}</span>
@@ -202,7 +202,7 @@ export function AppSidebar({ locale, role, dict }: AppSidebarProps) {
         })}
       </div>
 
-      <div className="rounded-xl border border-[#24314c] bg-[#101622] p-3 text-center">
+      <div className="glass rounded-xl p-3 text-center">
         <p className="text-[11px] font-medium text-[#caa95a]">Dentist on Call</p>
         <p className="text-[10px] text-[#64748b] mt-0.5">Cairo Season 2026</p>
       </div>

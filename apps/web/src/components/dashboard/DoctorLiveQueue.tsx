@@ -82,7 +82,7 @@ export function DoctorLiveQueue({ locale }: DoctorLiveQueueProps) {
             appointments.map((apt, idx) => (
               <div
                 key={idx}
-                className="rounded-xl border border-[#24314c] bg-[#101622] p-4 transition-all hover:border-[#caa95a]/40"
+                className="glass rounded-xl p-4 transition-all hover:border-[#caa95a]/40"
               >
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-start gap-3">
@@ -115,7 +115,7 @@ export function DoctorLiveQueue({ locale }: DoctorLiveQueueProps) {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 w-full sm:w-auto justify-end pt-2 sm:pt-0 border-t sm:border-t-0 border-[#24314c]/40">
+                  <div className="flex items-center gap-2 w-full sm:w-auto justify-end pt-2 sm:pt-0 border-t sm:border-t-0 glass-divider">
                     <Link href={`/${locale}/patients/${apt.patientCode}`} className="flex-1 sm:flex-none">
                       <Button variant="secondary" size="sm" className="w-full sm:w-auto">
                         {isAr ? "الملف" : "Chart"}

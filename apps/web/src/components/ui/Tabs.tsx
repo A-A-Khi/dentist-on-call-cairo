@@ -18,7 +18,7 @@ export interface TabsProps {
 
 export function Tabs({ items, activeTab, onChange, className = "" }: TabsProps) {
   return (
-    <div className={`flex items-center gap-1 border-b border-[#24314c] overflow-x-auto no-scrollbar ${className}`}>
+    <div className={`flex items-center gap-1 border-b glass-divider overflow-x-auto no-scrollbar ${className}`}>
       {items.map((item) => {
         const isActive = activeTab === item.id;
         return (
@@ -38,8 +38,8 @@ export function Tabs({ items, activeTab, onChange, className = "" }: TabsProps) 
               <span
                 className={`rounded-full px-1.5 py-0.2 text-[10px] ${
                   isActive
-                    ? "bg-[#caa95a]/20 text-[#caa95a]"
-                    : "bg-[#1c263b] text-[#94a3b8]"
+                    ? "glass-active text-[#caa95a]"
+                    : "glass bg-white/5 text-[#94a3b8]"
                 }`}
               >
                 {item.count}

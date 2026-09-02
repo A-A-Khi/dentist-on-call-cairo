@@ -59,9 +59,9 @@ export function Drawer({
 
       {/* Sheet Content */}
       <div
-        className={`fixed z-10 flex flex-col border-[#24314c] bg-[#101622] p-6 shadow-2xl shadow-black/80 transition-transform ${sideStyles[side]} ${widthStyles[size]}`}
+        className={`glass-popover fixed z-10 flex flex-col p-6 transition-transform ${sideStyles[side]} ${widthStyles[size]}`}
       >
-        <div className="flex items-center justify-between pb-4 border-b border-[#24314c]/60">
+        <div className="flex items-center justify-between pb-4 border-b glass-divider">
           <div>
             {title && <h3 className="text-base font-semibold text-[#f8fafc]">{title}</h3>}
             {description && <p className="text-xs text-[#94a3b8] mt-0.5">{description}</p>}
@@ -69,7 +69,7 @@ export function Drawer({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-1.5 text-[#64748b] hover:bg-[#151d2c] hover:text-[#f8fafc] transition-colors"
+            className="rounded-lg p-1.5 text-[#64748b] glass-hover hover:text-[#f8fafc] transition-colors"
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />

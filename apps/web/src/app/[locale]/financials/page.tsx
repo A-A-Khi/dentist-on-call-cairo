@@ -71,7 +71,7 @@ export default function FinancialsPage() {
 
         {/* Top Financial KPI Metrics */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="rounded-2xl border border-[#24314c] bg-[#101622] p-5 space-y-1">
+          <div className="glass-card rounded-2xl p-5 space-y-1">
             <span className="text-xs font-semibold text-[#94a3b8]">{dict.financials.stats.revenue}</span>
             <div className="font-mono text-xl font-bold text-emerald-400">
               +{totalRevenue.toLocaleString()} {locale === "ar" ? "ج.م" : "EGP"}
@@ -79,7 +79,7 @@ export default function FinancialsPage() {
             <span className="text-[10px] text-emerald-500/80">{locale === "ar" ? "مقبوضات مسجلة" : "Collections recorded"}</span>
           </div>
 
-          <div className="rounded-2xl border border-[#24314c] bg-[#101622] p-5 space-y-1">
+          <div className="glass-card rounded-2xl p-5 space-y-1">
             <span className="text-xs font-semibold text-[#94a3b8]">{dict.financials.stats.expenses}</span>
             <div className="font-mono text-xl font-bold text-rose-400">
               -{totalExpense.toLocaleString()} {locale === "ar" ? "ج.م" : "EGP"}
@@ -87,7 +87,7 @@ export default function FinancialsPage() {
             <span className="text-[10px] text-rose-500/80">{locale === "ar" ? "مستلزمات ومختبرات" : "Supplies & lab invoices"}</span>
           </div>
 
-          <div className="rounded-2xl border border-[#caa95a]/40 bg-[#151d2c] p-5 space-y-1 shadow-lg shadow-[#caa95a]/10">
+          <div className="glass-active rounded-2xl p-5 space-y-1 shadow-lg shadow-[#caa95a]/10">
             <span className="text-xs font-semibold text-[#caa95a]">{dict.financials.stats.profit}</span>
             <div className="font-mono text-xl font-bold text-[#f5e8c7]">
               {netProfit.toLocaleString()} {locale === "ar" ? "ج.م" : "EGP"}
@@ -95,7 +95,7 @@ export default function FinancialsPage() {
             <span className="text-[10px] text-[#caa95a]/80">{locale === "ar" ? "هامش الفترة الحالية" : "Current period margin"}</span>
           </div>
 
-          <div className="rounded-2xl border border-[#24314c] bg-[#101622] p-5 space-y-1">
+          <div className="glass-card rounded-2xl p-5 space-y-1">
             <span className="text-xs font-semibold text-[#94a3b8]">{dict.financials.stats.avgCase}</span>
             <div className="font-mono text-xl font-bold text-[#f8fafc]">
               {avgCase.toLocaleString()} {locale === "ar" ? "ج.م" : "EGP"}
@@ -105,8 +105,8 @@ export default function FinancialsPage() {
         </div>
 
         {/* Immutable Transaction Register */}
-        <div className="rounded-2xl border border-[#24314c] bg-[#101622] overflow-hidden">
-          <div className="p-4 border-b border-[#24314c] flex items-center justify-between">
+        <div className="glass-card rounded-2xl overflow-hidden">
+          <div className="p-4 border-b glass-divider flex items-center justify-between">
             <h3 className="text-sm font-semibold text-[#f8fafc]">
               {dict.financials.transactionRegister}
             </h3>
@@ -116,7 +116,7 @@ export default function FinancialsPage() {
           {/* Desktop Table View */}
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left rtl:text-right text-xs">
-              <thead className="border-b border-[#24314c] bg-[#151d2c]/80 text-[#94a3b8]">
+              <thead className="glass-table-header text-[#94a3b8]">
                 <tr>
                   <th className="px-4 py-3.5 font-medium">{locale === "ar" ? "رقم القيد" : "Ref"}</th>
                   <th className="px-4 py-3.5 font-medium">{dict.financials.table.date}</th>
@@ -136,7 +136,7 @@ export default function FinancialsPage() {
                   </tr>
                 ) : transactions.length > 0 ? (
                   transactions.map((tx) => (
-                    <tr key={tx.id} className="hover:bg-[#151d2c]/40 transition-colors">
+                    <tr key={tx.id} className="glass-hover transition-colors">
                       <td className="px-4 py-3.5 font-mono text-[#caa95a]">{tx.id.slice(0, 8).toUpperCase()}</td>
                       <td className="px-4 py-3.5 text-[#94a3b8] font-mono">{tx.date}</td>
                       <td className="px-4 py-3.5">
@@ -249,7 +249,7 @@ export default function FinancialsPage() {
             <label className="block text-xs font-medium text-[#94a3b8] mb-1">
               {locale === "ar" ? "نوع الحركة المالية" : "Transaction Type"}
             </label>
-            <select name="type" className="w-full rounded-xl border border-[#24314c] bg-[#151d2c] px-3.5 py-2 text-xs text-[#f8fafc] focus:border-[#caa95a] focus:outline-none">
+            <select name="type" className="w-full glass rounded-xl px-3.5 py-2 text-xs text-[#f8fafc] focus:border-[#caa95a] focus:outline-none">
               <option value="REVENUE">{locale === "ar" ? "إيراد / دفعة مريض (+)" : "Revenue / Patient Payment (+)"}</option>
               <option value="EXPENSE">{locale === "ar" ? "مصروف / تكلفة تشغيلية (-)" : "Expense / Operational (-)"}</option>
             </select>
@@ -259,7 +259,7 @@ export default function FinancialsPage() {
           <Input name="category" label={locale === "ar" ? "البند" : "Category"} placeholder={locale === "ar" ? "مثل: علاج أسنان، معمل، مستلزمات" : "e.g. Clinical Treatment, Lab Fees, Dental Supplies"} required />
           <Input name="description" label={locale === "ar" ? "البيان / الوصف" : "Description"} placeholder={locale === "ar" ? "مثل: دفعة تركيبة أو صيانة أجهزة" : "e.g. Crown restoration fee or autoclave maintenance"} required />
 
-          <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#24314c]/60">
+          <div className="flex items-center justify-end gap-2 pt-3 border-t glass-divider/60">
             <Button
               variant="outline"
               size="sm"

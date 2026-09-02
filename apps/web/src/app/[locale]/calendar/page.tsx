@@ -75,7 +75,7 @@ export default function CalendarPage() {
         </div>
 
         {/* Calendar Controls Bar */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 rounded-2xl border border-[#24314c] bg-[#101622] p-3">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 glass-card rounded-2xl p-3">
           {/* Date Navigator */}
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <span className="font-bold text-xs text-[#f8fafc] px-2">
@@ -88,7 +88,7 @@ export default function CalendarPage() {
             <select
               value={selectedDoctor}
               onChange={(e) => setSelectedDoctor(e.target.value)}
-              className="rounded-xl border border-[#24314c] bg-[#151d2c] px-3 py-1.5 text-xs text-[#f8fafc] focus:border-[#caa95a] focus:outline-none"
+              className="glass rounded-xl px-3 py-1.5 text-xs text-[#f8fafc] focus:border-[#caa95a] focus:outline-none"
             >
               <option value="ALL">{dict.calendar.filterDoctor}: {locale === "ar" ? "الكل" : "All"}</option>
               {INITIAL_DOCTORS.map((d) => (
@@ -99,7 +99,7 @@ export default function CalendarPage() {
             </select>
 
             {/* View mode toggle */}
-            <div className="flex items-center rounded-xl border border-[#24314c] bg-[#151d2c] p-1 text-xs overflow-x-auto max-w-full">
+            <div className="flex items-center glass rounded-xl p-1 text-xs overflow-x-auto max-w-full">
               {(["Day", "Week", "Month", "Agenda"] as const).map((view) => (
                 <button
                   key={view}
@@ -119,8 +119,8 @@ export default function CalendarPage() {
         </div>
 
         {/* Calendar Day Slots View */}
-        <div className="rounded-2xl border border-[#24314c] bg-[#101622] overflow-hidden shadow-xl">
-          <div className="flex items-center justify-between p-4 border-b border-[#24314c]/60">
+        <div className="glass-card rounded-2xl overflow-hidden shadow-xl">
+          <div className="flex items-center justify-between p-4 border-b glass-divider/60">
             <span className="text-xs font-semibold text-[#caa95a]">
               {locale === "ar" ? "الجدول الزمني لليوم" : "Daily Operatory Timeline"}
             </span>
@@ -136,14 +136,14 @@ export default function CalendarPage() {
               return (
                 <div
                   key={slot}
-                  className="flex flex-col sm:flex-row sm:items-center gap-3 py-2 border-b border-[#24314c]/30 last:border-0"
+                  className="flex flex-col sm:flex-row sm:items-center gap-3 py-2 border-b glass-divider/30 last:border-0"
                 >
                   <div className="w-20 shrink-0 font-mono text-xs font-bold text-[#94a3b8]">
                     {slot}
                   </div>
 
                   {matchedAppt ? (
-                    <div className="flex-1 rounded-xl border border-[#caa95a]/40 bg-[#151d2c] p-3 shadow-md">
+                    <div className="flex-1 glass-active rounded-xl p-3 shadow-md">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <div>
                           <div className="flex items-center gap-2">
@@ -168,7 +168,7 @@ export default function CalendarPage() {
                         <div className="flex items-center gap-2">
                           <Link
                             href={`/${locale}/patients/${matchedAppt.patientCode}`}
-                            className="rounded-lg border border-[#24314c] bg-[#101622] px-2.5 py-1 text-[11px] text-[#94a3b8] hover:text-[#f8fafc]"
+                            className="rounded-lg glass px-2.5 py-1 text-[11px] text-[#94a3b8] hover:text-[#f8fafc]"
                           >
                             {dict.patients.table.viewChart}
                           </Link>
@@ -182,7 +182,7 @@ export default function CalendarPage() {
                       </div>
                     </div>
                   ) : (
-                    <div className="flex-1 rounded-xl border border-dashed border-[#24314c]/50 bg-[#151d2c]/20 p-2.5 text-xs text-[#64748b]">
+                    <div className="glass flex-1 rounded-xl border-dashed p-2.5 text-xs text-[#64748b]">
                       {locale === "ar" ? "الوقت متاح للحجز" : "Chair available for booking"}
                     </div>
                   )}
@@ -233,7 +233,7 @@ export default function CalendarPage() {
             <label className="block text-xs font-medium text-[#94a3b8] mb-1">
               {locale === "ar" ? "اختيار المريض" : "Select Patient"}
             </label>
-            <select name="patientCode" required className="w-full rounded-xl border border-[#24314c] bg-[#151d2c] px-3.5 py-2 text-xs text-[#f8fafc] focus:border-[#caa95a] focus:outline-none">
+            <select name="patientCode" required className="w-full glass rounded-xl px-3.5 py-2 text-xs text-[#f8fafc] focus:border-[#caa95a] focus:outline-none">
               {patients.length > 0 ? (
                 patients.map((p) => (
                   <option key={p.id} value={p.code}>
@@ -250,7 +250,7 @@ export default function CalendarPage() {
             <label className="block text-xs font-medium text-[#94a3b8] mb-1">
               {dict.calendar.filterDoctor}
             </label>
-            <select name="doctorName" className="w-full rounded-xl border border-[#24314c] bg-[#151d2c] px-3.5 py-2 text-xs text-[#f8fafc] focus:border-[#caa95a] focus:outline-none">
+            <select name="doctorName" className="w-full glass rounded-xl px-3.5 py-2 text-xs text-[#f8fafc] focus:border-[#caa95a] focus:outline-none">
               {INITIAL_DOCTORS.map((d) => (
                 <option key={d.id} value={d.name}>
                   {d.name} ({d.specialization})
@@ -269,7 +269,7 @@ export default function CalendarPage() {
               <label className="block text-xs font-medium text-[#94a3b8] mb-1">
                 {locale === "ar" ? "المدة المتوقعة" : "Duration"}
               </label>
-              <select name="duration" className="w-full rounded-xl border border-[#24314c] bg-[#151d2c] px-3.5 py-2 text-xs text-[#f8fafc] focus:border-[#caa95a] focus:outline-none">
+              <select name="duration" className="w-full glass rounded-xl px-3.5 py-2 text-xs text-[#f8fafc] focus:border-[#caa95a] focus:outline-none">
                 <option value="30">30 {locale === "ar" ? "دقيقة" : "Minutes"}</option>
                 <option value="45">45 {locale === "ar" ? "دقيقة" : "Minutes"}</option>
                 <option value="60">60 {locale === "ar" ? "دقيقة" : "Minutes"}</option>
@@ -280,7 +280,7 @@ export default function CalendarPage() {
               <label className="block text-xs font-medium text-[#94a3b8] mb-1">
                 {locale === "ar" ? "الغرفة / الكرسي" : "Clinic Room"}
               </label>
-              <select name="room" className="w-full rounded-xl border border-[#24314c] bg-[#151d2c] px-3.5 py-2 text-xs text-[#f8fafc] focus:border-[#caa95a] focus:outline-none">
+              <select name="room" className="w-full glass rounded-xl px-3.5 py-2 text-xs text-[#f8fafc] focus:border-[#caa95a] focus:outline-none">
                 <option>{locale === "ar" ? "عيادة ١ — الكرسي الرئيسي" : "Room 1 — Main Operatory"}</option>
                 <option>{locale === "ar" ? "عيادة ٢ — جناح علاج الجذور" : "Room 2 — Periodontal Suite"}</option>
                 <option>{locale === "ar" ? "عيادة ٣ — جراحة الفم والأسنان" : "Room 3 — Surgical Suite"}</option>
@@ -301,7 +301,7 @@ export default function CalendarPage() {
             placeholder={locale === "ar" ? "مثل: كشف، حشو تجميلي، سحب عصب..." : "e.g. Consultation, Composite filling, Root Canal..."}
           />
 
-          <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#24314c]/60">
+          <div className="flex items-center justify-end gap-2 pt-3 border-t glass-divider/60">
             <Button
               variant="outline"
               size="sm"

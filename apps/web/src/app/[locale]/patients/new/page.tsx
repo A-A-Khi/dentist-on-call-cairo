@@ -94,7 +94,7 @@ export default function NewPatientPage() {
 
           <Link
             href={`/${locale}/patients`}
-            className="rounded-xl border border-[#24314c] bg-[#101622] px-3.5 py-2 text-xs font-medium text-[#94a3b8] hover:text-[#f8fafc] transition-colors"
+            className="glass rounded-xl px-3.5 py-2 text-xs font-medium text-[#94a3b8] hover:text-[#f8fafc] transition-colors"
           >
             {dict.patientNew.cancelButton}
           </Link>
@@ -102,8 +102,8 @@ export default function NewPatientPage() {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Section 1: Demographics */}
-          <div className="rounded-2xl border border-[#24314c] bg-[#101622] p-5 sm:p-6 space-y-4">
-            <div className="flex items-center gap-2 pb-3 border-b border-[#24314c]/60">
+          <div className="glass-card rounded-2xl p-5 sm:p-6 space-y-4">
+            <div className="flex items-center gap-2 pb-3 border-b glass-divider/60">
               <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-[#caa95a]/20 text-xs font-bold text-[#caa95a]">
                 1
               </div>
@@ -133,7 +133,7 @@ export default function NewPatientPage() {
                   </label>
                   <select
                     name="gender"
-                    className="w-full rounded-xl border border-[#24314c] bg-[#151d2c] px-3.5 py-2 text-xs text-[#f8fafc] focus:border-[#caa95a] focus:outline-none"
+                    className="w-full glass rounded-xl px-3.5 py-2 text-xs text-[#f8fafc] focus:border-[#caa95a] focus:outline-none"
                   >
                     <option value="Male">{locale === "ar" ? "ذكر" : "Male"}</option>
                     <option value="Female">{locale === "ar" ? "أنثى" : "Female"}</option>
@@ -172,8 +172,8 @@ export default function NewPatientPage() {
           </div>
 
           {/* Section 2: Medical History */}
-          <div className="rounded-2xl border border-[#24314c] bg-[#101622] p-5 sm:p-6 space-y-4">
-            <div className="flex items-center gap-2 pb-3 border-b border-[#24314c]/60">
+          <div className="glass-card rounded-2xl p-5 sm:p-6 space-y-4">
+            <div className="flex items-center gap-2 pb-3 border-b glass-divider/60">
               <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-amber-500/20 text-xs font-bold text-amber-400">
                 2
               </div>
@@ -207,7 +207,7 @@ export default function NewPatientPage() {
                     required
                   />
                 ) : (
-                  <div className="rounded-xl border border-[#24314c] bg-[#151d2c]/50 px-3.5 py-2 text-xs text-[#64748b]">
+                  <div className="glass rounded-xl/50 px-3.5 py-2 text-xs text-[#64748b]">
                     {locale === "ar" ? "لا توجد حساسية دوائية أو غذائية مسجلة" : "No known allergies reported"}
                   </div>
                 )}
@@ -237,7 +237,7 @@ export default function NewPatientPage() {
                     required
                   />
                 ) : (
-                  <div className="rounded-xl border border-[#24314c] bg-[#151d2c]/50 px-3.5 py-2 text-xs text-[#64748b]">
+                  <div className="glass rounded-xl/50 px-3.5 py-2 text-xs text-[#64748b]">
                     {locale === "ar" ? "لا توجد أمراض مزمنة مسجلة" : "No systemic chronic conditions"}
                   </div>
                 )}
@@ -256,7 +256,7 @@ export default function NewPatientPage() {
                   </label>
                   <select
                     name="smokingStatus"
-                    className="w-full rounded-xl border border-[#24314c] bg-[#151d2c] px-3.5 py-2 text-xs text-[#f8fafc] focus:border-[#caa95a] focus:outline-none"
+                    className="w-full glass rounded-xl px-3.5 py-2 text-xs text-[#f8fafc] focus:border-[#caa95a] focus:outline-none"
                   >
                     <option value="Non-smoker">{locale === "ar" ? "غير مدخن" : "Non-smoker"}</option>
                     <option value="Smoker">{locale === "ar" ? "مدخن" : "Smoker"}</option>
@@ -268,8 +268,8 @@ export default function NewPatientPage() {
           </div>
 
           {/* Section 3: Emergency Contact & Assignment */}
-          <div className="rounded-2xl border border-[#24314c] bg-[#101622] p-5 sm:p-6 space-y-4">
-            <div className="flex items-center gap-2 pb-3 border-b border-[#24314c]/60">
+          <div className="glass-card rounded-2xl p-5 sm:p-6 space-y-4">
+            <div className="flex items-center gap-2 pb-3 border-b glass-divider/60">
               <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-500/20 text-xs font-bold text-emerald-400">
                 3
               </div>
@@ -309,7 +309,7 @@ export default function NewPatientPage() {
           <div className="flex items-center justify-end gap-3 pt-2">
             <Link
               href={`/${locale}/patients`}
-              className="rounded-xl border border-[#24314c] bg-[#101622] px-5 py-2.5 text-xs font-semibold text-[#94a3b8] hover:text-[#f8fafc] transition-colors"
+              className="glass rounded-xl px-5 py-2.5 text-xs font-semibold text-[#94a3b8] hover:text-[#f8fafc] transition-colors"
             >
               {dict.patientNew.cancelButton}
             </Link>

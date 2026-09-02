@@ -11,10 +11,9 @@ export function Card({
   ...props
 }: CardProps) {
   const variantStyles = {
-    default: "bg-[#101622] border border-[#24314c]",
-    elevated: "bg-[#151d2c] border border-[#24314c] shadow-xl shadow-black/40",
-    "gold-bordered":
-      "bg-[#101622] border border-[#caa95a]/30 shadow-lg shadow-[#caa95a]/5",
+    default: "glass-card",
+    elevated: "glass-elevated",
+    "gold-bordered": "glass-card-gold",
   };
 
   return (

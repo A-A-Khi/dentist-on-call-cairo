@@ -51,7 +51,7 @@ export default function ActivityPage() {
         </div>
 
         {/* Audit Log Timeline */}
-        <div className="rounded-2xl border border-[#24314c] bg-[#101622] p-5 sm:p-6 space-y-4">
+        <div className="glass-card rounded-2xl p-5 sm:p-6 space-y-4">
           <div className="divide-y divide-[#24314c]/50">
             {isLoading ? (
               <div className="py-12 text-center text-xs text-[#94a3b8]">

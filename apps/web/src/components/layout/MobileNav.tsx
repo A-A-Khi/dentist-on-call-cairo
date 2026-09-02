@@ -20,7 +20,7 @@ export function MobileNav({ locale, role = "ADMIN" }: MobileNavProps) {
   const dashboardHref = `/${locale}/dashboard/${role === "ADMIN" ? "admin" : "doctor"}`;
 
   return (
-    <nav className="fixed bottom-0 inset-x-0 z-40 md:hidden border-t border-[#24314c] bg-[#0a0d14]/95 backdrop-blur-xl px-2 py-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+    <nav className="glass-nav fixed bottom-0 inset-x-0 z-40 md:hidden border-t px-2 py-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
       <div className="flex items-center justify-around">
         {/* Dashboard */}
         <Link
