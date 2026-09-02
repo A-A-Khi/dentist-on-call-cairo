@@ -39,7 +39,7 @@ def get_engine_url(raw_url: str) -> str:
             if not user.startswith("postgres."):
                 user = f"postgres.{ref}"
 
-        encoded_pwd = urllib.parse.quote(pwd, safe="")
+        encoded_pwd = urllib.parse.quote(urllib.parse.unquote(pwd), safe="")
         return f"postgresql+psycopg://{user}:{encoded_pwd}@{host_part}"
 
     return clean_url
