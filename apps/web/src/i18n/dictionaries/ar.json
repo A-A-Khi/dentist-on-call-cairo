@@ -1,0 +1,286 @@
+{
+  "brand": {
+    "name": "طبيب أسنان تحت الطلب",
+    "tagline": "القاهرة — إدارة العمليات والعيادات السنية والطوارئ",
+    "securePortal": "البوابة الداخلية الآمنة"
+  },
+  "nav": {
+    "dashboard": "لوحة التحكم",
+    "patients": "المرضى",
+    "calendar": "التقويم",
+    "reservations": "الحجوزات",
+    "doctors": "الأطباء",
+    "financials": "المالية",
+    "reports": "التقارير",
+    "activity": "سجل النشاط",
+    "settings": "الإعدادات",
+    "logout": "تسجيل الخروج",
+    "profile": "الملف الشخصي"
+  },
+  "auth": {
+    "signInTitle": "تسجيل الدخول إلى حسابك",
+    "signInSubtitle": "مخصص للكوادر الطبية والإدارية المصرح لها فقط",
+    "emailLabel": "البريد الإلكتروني",
+    "emailPlaceholder": "name@dentistoncall.eg",
+    "passwordLabel": "كلمة المرور",
+    "passwordPlaceholder": "••••••••••••",
+    "rememberMe": "تذكر هذه الجلسة",
+    "forgotPassword": "نسيت كلمة المرور؟",
+    "signInButton": "تسجيل الدخول",
+    "signingIn": "جاري التحقق...",
+    "invalidCredentials": "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
+    "rateLimitError": "محاولات تسجيل دخول كثيرة غير ناجحة. يرجى الانتظار والمحاولة لاحقاً.",
+    "networkError": "تعذر الاتصال بخادم المصادقة.",
+    "demoAdminFill": "تعبئة بيانات الإدارة",
+    "demoDoctorFill": "تعبئة بيانات الطبيب",
+    "securityNotice": "نظام بيانات طبية محمي. جميع العمليات مسجلة وتخضع للرقابة والتدقيق.",
+    "forgotPasswordTitle": "استعادة كلمة المرور",
+    "forgotPasswordSubtitle": "أدخل بريدك الإلكتروني لتوليد رمز إعادة تعيين كلمة المرور.",
+    "sendResetLink": "إصدار رمز الاستعادة",
+    "backToLogin": "العودة إلى تسجيل الدخول",
+    "resetRequestSent": "إذا كان هناك حساب نشط مسجل بهذا البريد، تم إصدار رمز إعادة التعيين."
+  },
+  "roles": {
+    "admin": "مدير النظام",
+    "doctor": "طبيب أخصائي"
+  },
+  "dashboard": {
+    "adminTitle": "نظرة عامة على عمليات العيادة",
+    "adminSubtitle": "المؤشرات التشغيلية الحية، المواعيد، والأداء المالي في الوقت الفعلي",
+    "doctorTitle": "مساحة العمل الإكلينيكية للطبيب",
+    "doctorSubtitle": "المرضى المجدولون لديك، الحالات النشطة، والخطة العلاجية",
+    "stats": {
+      "totalPatients": "إجمالي المرضى",
+      "todayVisits": "زيارات اليوم",
+      "monthlyRevenue": "إيرادات الشهر",
+      "activeDoctors": "الأطباء النشطون",
+      "pendingAppointments": "بانتظار التأكيد",
+      "completedToday": "علاجات مكتملة اليوم"
+    },
+    "quickActions": {
+      "title": "إجراءات سريعة",
+      "newPatient": "تسجيل مريض جديد",
+      "newVisit": "تسجيل زيارة علاجية",
+      "newAppointment": "حجز موعد",
+      "recordPayment": "تسجيل معاملة مالية",
+      "viewCalendar": "فتح التقويم بالكامل"
+    },
+    "recentPatients": {
+      "title": "أحدث سجلات المرضى",
+      "viewAll": "عرض جميع المرضى",
+      "code": "كود المريض",
+      "name": "اسم المريض",
+      "phone": "الهاتف",
+      "lastVisit": "آخر زيارة",
+      "status": "الحالة",
+      "action": "فتح الملف"
+    },
+    "todaySchedule": {
+      "title": "جدول مواعيد اليوم",
+      "time": "الوقت",
+      "patient": "المريض",
+      "doctor": "الطبيب الأخصائي",
+      "procedure": "الإجراء الطبي",
+      "status": "الحالة"
+    },
+    "activityLog": {
+      "title": "آخر النشاطات في النظام",
+      "viewAll": "عرض سجل التدقيق"
+    }
+  },
+  "patients": {
+    "title": "دليل وسجلات المرضى",
+    "subtitle": "البحث والتصفية وإدارة الملفات السريرية وخطط العلاج",
+    "addPatient": "إضافة مريض",
+    "searchPlaceholder": "البحث بالاسم، كود المريض، أو رقم الهاتف...",
+    "filterDoctor": "جميع الأطباء",
+    "filterStatus": "جميع الحالات",
+    "table": {
+      "code": "كود المريض",
+      "name": "الاسم بالكامل",
+      "ageGender": "العمر / النوع",
+      "phone": "رقم الهاتف",
+      "assignedDoctor": "الطبيب المعالج",
+      "lastVisit": "آخر زيارة",
+      "nextAppointment": "الموعد القادم",
+      "status": "الحالة",
+      "actions": "الإجراءات",
+      "viewChart": "فتح الملف",
+      "recordVisit": "تسجيل زيارة"
+    },
+    "empty": "لا توجد نتائج مطابقة لخيارات البحث."
+  },
+  "patientNew": {
+    "title": "تسجيل مريض جديد",
+    "subtitle": "إنشاء ملف طبي جديد مع التنبيهات السريرية وبيانات الطوارئ",
+    "step1Title": "١. البيانات الشخصية والاتصال",
+    "step2Title": "٢. التاريخ المرضي والتنبيهات الطبية",
+    "step3Title": "٣. بيانات الطوارئ والطبيب المعالج",
+    "fullName": "الاسم القانوني بالكامل",
+    "dob": "تاريخ الميلاد",
+    "gender": "النوع",
+    "phone": "رقم الهاتف الرئيسي",
+    "whatsapp": "رقم الواتساب",
+    "email": "البريد الإلكتروني",
+    "address": "عنوان السكن (المنطقة بالقاهرة)",
+    "assignedDoctor": "تعيين الطبيب الأخصائي",
+    "allergiesLabel": "الحساسية الدوائية والغذائية",
+    "allergiesPlaceholder": "مثل: بنسلين، لاتكس، مضادات التهاب...",
+    "conditionsLabel": "الأمراض المزمنة المعروفة",
+    "medicationsLabel": "الأدوية النظامية الحالية",
+    "surgeriesLabel": "عمليات جراحية سابقة",
+    "smokingLabel": "حالة التدخين",
+    "emergencyName": "اسم شخص للطوارئ",
+    "emergencyRelation": "صلة القرابة",
+    "emergencyPhone": "هاتف الطوارئ",
+    "chiefComplaintInitial": "الشكوى الأساسية / سبب الزيارة الأولي",
+    "submitButton": "إتمام التسجيل وفتح الملف الطبي",
+    "cancelButton": "إلغاء التسجيل"
+  },
+  "patientProfile": {
+    "title": "الملف الطبي للمريض",
+    "startVisit": "بدء زيارة جديدة",
+    "scheduleAppointment": "حجز موعد",
+    "editDemographics": "تعديل البيانات",
+    "uploadAttachment": "رفع ملف / أشعة",
+    "medicalAlerts": "التنبيهات والمحاذير الطبية",
+    "tabs": {
+      "overview": "نظرة عامة",
+      "medicalHistory": "التاريخ المرضي",
+      "dentalHistory": "التاريخ السني",
+      "visits": "سجل الزيارات",
+      "attachments": "المرفقات والأشعة"
+    },
+    "nextAppointmentCard": "الموعد القادم المجدول",
+    "lastVisitCard": "آخر زيارة علاجية",
+    "timelineTitle": "الجدول الزمني للعلاجات السريرية",
+    "emergencyTitle": "بيانات الطوارئ",
+    "demographicsTitle": "البيانات الشخصية"
+  },
+  "visitNew": {
+    "title": "تسجيل زيارة سريرية",
+    "subtitle": "توثيق فوري وسريع للفحص الإكلينيكي والتشخيص والإجراءات والأشعة",
+    "patientContext": "المريض الحالي",
+    "chiefComplaint": "الشكوى الرئيسية وتاريخ العَرَض الحالي",
+    "clinicalFindings": "الفحص السريري والملاحظات الفموية",
+    "diagnosis": "التشخيص الإكلينيكي",
+    "proceduresTitle": "الإجراءات الطبية المنفذة",
+    "addProcedure": "+ إضافة إجراء طبي",
+    "procedureName": "اسم الإجراء",
+    "toothNumber": "رقم السن",
+    "costEGP": "التكلفة (ج.م)",
+    "procedureStatus": "الحالة",
+    "attachmentsTitle": "الوسائط والأشعة والصور",
+    "uploadXray": "رفع أشعة سينية (ذروية / بانوراما)",
+    "takePhoto": "التقاط صورة سريرية بالكاميرا",
+    "uploadDoc": "إرفاق تقرير مختبر / مستند",
+    "doctorNotes": "ملاحظات الطبيب المعالج والتعليمات",
+    "prescriptions": "الوصفة الطبية (الجرعة / التكرار / المدة)",
+    "saveDraft": "حفظ كمسودة",
+    "saveAndComplete": "حفظ واعتماد الزيارة",
+    "savedNotice": "تم حفظ الزيارة الطبية بنجاح في السجل العلاجي."
+  },
+  "calendar": {
+    "title": "تقويم المواعيد السريرية",
+    "subtitle": "جدولة وتتبع أوقات الأخصائيين وغرف العمليات في فروع العيادة",
+    "bookAppointment": "+ حجز موعد جديد",
+    "filterDoctor": "الطبيب الأخصائي",
+    "views": {
+      "month": "شهري",
+      "week": "أسبوعي",
+      "day": "يومي",
+      "agenda": "جدول زمني"
+    }
+  },
+  "reservations": {
+    "title": "إدارة الحجوزات والمواعيد",
+    "subtitle": "المواعيد المؤكدة وقيد الانتظار مع خيارات تغيير الحالة الفورية",
+    "filterStatus": "تصفية بالحالة",
+    "filterDoctor": "تصفية بالطبيب",
+    "actions": {
+      "confirm": "تأكيد",
+      "reschedule": "إعادة جدولة",
+      "cancel": "إلغاء",
+      "complete": "اكتمال",
+      "noShow": "لم يحضر"
+    }
+  },
+  "doctors": {
+    "title": "دليل الأطباء الأخصائيين",
+    "subtitle": "فريق العمل الطبي، التخصصات الجراحية، ومعدل الإنجاز الشهري",
+    "activeSpecialists": "الأخصائيون النشطون",
+    "addDoctor": "+ إضافة طبيب",
+    "specialization": "التخصص الدقيق",
+    "activePatients": "المرضى النشطون",
+    "monthlyVisits": "الزيارات المكتملة هذا الشهر",
+    "phone": "الهاتف المباشر",
+    "status": "حالة الدوام"
+  },
+  "financials": {
+    "title": "الدفتر المالي والأداء العام",
+    "subtitle": "سجل المعاملات غير القابل للتعديل، تحليلات الإيرادات، والمصروفات اليومية",
+    "stats": {
+      "revenue": "إجمالي الإيرادات (ج.م)",
+      "expenses": "إجمالي المصروفات (ج.م)",
+      "profit": "صافي الربح التشغيلي",
+      "avgCase": "متوسط قيمة الحالة"
+    },
+    "transactionRegister": "سجل المعاملات السريرية والمالية",
+    "postTransaction": "+ تسجيل معاملة مالية",
+    "table": {
+      "date": "التاريخ الفعلي",
+      "type": "النوع",
+      "category": "البند",
+      "amount": "المبلغ",
+      "patientDoctor": "المريض / الطبيب",
+      "description": "الوصف",
+      "status": "الحالة",
+      "reverse": "تسوية / عكس القيد"
+    }
+  },
+  "reports": {
+    "title": "مركز التقارير والتحليلات",
+    "subtitle": "توليد وتصدير تقارير الأداء المالي والتشغيلي ومعدلات الإنجاز السريري",
+    "dateRange": "الفترة الزمنية",
+    "exportCSV": "تصدير CSV",
+    "exportPDF": "تحميل تقرير PDF",
+    "revenueReport": "الإيرادات حسب الإجراء الطبي",
+    "doctorReport": "إنتاجية وإنتاج أطباء العيادة",
+    "patientGrowth": "معدل استقطاب المرضى الجدد"
+  },
+  "activity": {
+    "title": "سجل النشاط والتدقيق الأمني",
+    "subtitle": "سجل تدقيق غير قابل للتلاعب لجميع العمليات السريرية والمالية وتعديلات السجلات",
+    "filterRole": "تصفية حسب الدور",
+    "search": "بحث في سجلات التدقيق..."
+  },
+  "settings": {
+    "title": "إعدادات المنصة والعيادة",
+    "subtitle": "إدارة الإعدادات السريرية الافتراضية وتفضيلات المستخدم والأمان",
+    "tabs": {
+      "account": "الحساب والأمان",
+      "clinic": "بيانات العيادة",
+      "appearance": "المظهر واللغة",
+      "notifications": "الإشعارات والتنبيهات"
+    },
+    "clinicName": "الاسم القانوني للعيادة",
+    "timezone": "المنطقة الزمنية",
+    "defaultLocale": "لغة الواجهة الافتراضية",
+    "currency": "العملة المعتمدة",
+    "save": "حفظ التفضيلات"
+  },
+  "common": {
+    "loading": "جاري التحميل...",
+    "save": "حفظ التغييرات",
+    "cancel": "إلغاء",
+    "close": "إغلاق",
+    "statusActive": "نشط",
+    "statusPending": "قيد الانتظار",
+    "statusConfirmed": "مؤكد",
+    "statusCompleted": "مكتمل",
+    "statusCancelled": "ملغي",
+    "language": "اللغة",
+    "search": "بحث...",
+    "noRecordsFound": "لا توجد سجلات حالياً."
+  }
+}

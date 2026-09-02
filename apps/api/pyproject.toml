@@ -1,0 +1,49 @@
+[project]
+name = "dentist-on-call-api"
+version = "0.1.0"
+description = "Dentist on Call backend"
+requires-python = ">=3.12"
+dependencies = [
+  "alembic>=1.14,<2",
+  "argon2-cffi>=23.1,<26",
+  "fastapi>=0.115,<1",
+  "email-validator>=2.2,<3",
+  "PyJWT>=2.10,<3",
+  "pydantic-settings>=2.7,<3",
+  "psycopg[binary]>=3.2,<4",
+  "sqlalchemy>=2.0,<3",
+  "uvicorn[standard]>=0.34,<1"
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[dependency-groups]
+dev = [
+  "httpx2>=1,<2",
+  "mypy>=1.14,<2",
+  "pytest>=8.3,<9",
+  "ruff>=0.9,<1"
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["E501"] # SQL migration statements are deliberately kept readable as SQL blocks.
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unused_ignores = true
+exclude = ["alembic"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

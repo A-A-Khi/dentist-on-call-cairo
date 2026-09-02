@@ -1,0 +1,14 @@
+{
+  "name": "dentist-on-call",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix apps/web run dev",
+    "web": "npm --prefix apps/web run dev",
+    "api": "cmd /c start-api.bat",
+    "build": "npm --prefix apps/web run build",
+    "start": "npm --prefix apps/web start",
+    "lint": "npm --prefix apps/web run lint",
+    "typecheck": "npm --prefix apps/web run typecheck"
+  }
+}

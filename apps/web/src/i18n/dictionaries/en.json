@@ -1,0 +1,286 @@
+{
+  "brand": {
+    "name": "Dentist on Call",
+    "tagline": "Cairo Emergency & Clinical Dental Operations",
+    "securePortal": "Internal Secure Portal"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "patients": "Patients",
+    "calendar": "Calendar",
+    "reservations": "Reservations",
+    "doctors": "Doctors",
+    "financials": "Financials",
+    "reports": "Reports",
+    "activity": "Audit Activity",
+    "settings": "Settings",
+    "logout": "Sign Out",
+    "profile": "Profile"
+  },
+  "auth": {
+    "signInTitle": "Sign In to Your Account",
+    "signInSubtitle": "Authorized clinical staff and administrators only",
+    "emailLabel": "Email Address",
+    "emailPlaceholder": "name@dentistoncall.eg",
+    "passwordLabel": "Password",
+    "passwordPlaceholder": "••••••••••••",
+    "rememberMe": "Remember this session",
+    "forgotPassword": "Forgot password?",
+    "signInButton": "Sign In",
+    "signingIn": "Authenticating...",
+    "invalidCredentials": "The email or password you entered is incorrect.",
+    "rateLimitError": "Too many failed attempts. Please wait before trying again.",
+    "networkError": "Unable to connect to the authentication server.",
+    "demoAdminFill": "Fill Admin Credentials",
+    "demoDoctorFill": "Fill Doctor Credentials",
+    "securityNotice": "Protected clinical information system. All access is logged and audited.",
+    "forgotPasswordTitle": "Reset Your Password",
+    "forgotPasswordSubtitle": "Enter your work email to receive a password reset token.",
+    "sendResetLink": "Generate Reset Token",
+    "backToLogin": "Back to Sign In",
+    "resetRequestSent": "If an active account exists with that email, a password reset token has been issued."
+  },
+  "roles": {
+    "admin": "Administrator",
+    "doctor": "Dental Specialist"
+  },
+  "dashboard": {
+    "adminTitle": "Clinic Operations Overview",
+    "adminSubtitle": "Real-time key performance metrics, appointments, and operational health",
+    "doctorTitle": "Doctor Clinical Workspace",
+    "doctorSubtitle": "Your scheduled patients, active treatments, and clinical timelines",
+    "stats": {
+      "totalPatients": "Total Patients",
+      "todayVisits": "Today's Visits",
+      "monthlyRevenue": "Monthly Revenue",
+      "activeDoctors": "Active Specialists",
+      "pendingAppointments": "Pending Confirmations",
+      "completedToday": "Completed Treatments"
+    },
+    "quickActions": {
+      "title": "Quick Actions",
+      "newPatient": "Register New Patient",
+      "newVisit": "Record Clinical Visit",
+      "newAppointment": "Book Appointment",
+      "recordPayment": "Post Transaction",
+      "viewCalendar": "Open Full Calendar"
+    },
+    "recentPatients": {
+      "title": "Recent Patient Records",
+      "viewAll": "View all patients",
+      "code": "Patient Code",
+      "name": "Patient Name",
+      "phone": "Phone",
+      "lastVisit": "Last Visit",
+      "status": "Status",
+      "action": "Open Chart"
+    },
+    "todaySchedule": {
+      "title": "Today's Clinic Schedule",
+      "time": "Time",
+      "patient": "Patient",
+      "doctor": "Specialist",
+      "procedure": "Procedure",
+      "status": "Status"
+    },
+    "activityLog": {
+      "title": "Recent System Activity",
+      "viewAll": "View audit logs"
+    }
+  },
+  "patients": {
+    "title": "Patients Directory",
+    "subtitle": "Search, filter, and manage clinical patient files and treatment records",
+    "addPatient": "Add Patient",
+    "searchPlaceholder": "Search by patient name, DOC-ID, or phone number...",
+    "filterDoctor": "All Doctors",
+    "filterStatus": "All Statuses",
+    "table": {
+      "code": "Patient Code",
+      "name": "Full Name",
+      "ageGender": "Age / Gender",
+      "phone": "Phone",
+      "assignedDoctor": "Assigned Doctor",
+      "lastVisit": "Last Visit",
+      "nextAppointment": "Next Appointment",
+      "status": "Status",
+      "actions": "Actions",
+      "viewChart": "Open Chart",
+      "recordVisit": "Record Visit"
+    },
+    "empty": "No patients found matching your search criteria."
+  },
+  "patientNew": {
+    "title": "Register New Patient",
+    "subtitle": "Create a new medical file with clinical flags and emergency contact details",
+    "step1Title": "1. Demographics & Contact",
+    "step2Title": "2. Medical History & Alerts",
+    "step3Title": "3. Emergency Contact & Assignment",
+    "fullName": "Full Legal Name",
+    "dob": "Date of Birth",
+    "gender": "Gender",
+    "phone": "Primary Phone Number",
+    "whatsapp": "WhatsApp Number",
+    "email": "Email Address",
+    "address": "Home Address (Cairo District)",
+    "assignedDoctor": "Assign Primary Specialist",
+    "allergiesLabel": "Drug & Food Allergies",
+    "allergiesPlaceholder": "e.g. Penicillin, Latex, NSAIDs...",
+    "conditionsLabel": "Known Medical Conditions",
+    "medicationsLabel": "Current Systemic Medications",
+    "surgeriesLabel": "Previous Major Surgeries",
+    "smokingLabel": "Smoking Status",
+    "emergencyName": "Emergency Contact Name",
+    "emergencyRelation": "Relationship",
+    "emergencyPhone": "Emergency Contact Phone",
+    "chiefComplaintInitial": "Initial Chief Complaint / Dental Concern",
+    "submitButton": "Complete Registration & Open Chart",
+    "cancelButton": "Cancel Registration"
+  },
+  "patientProfile": {
+    "title": "Patient Clinical Profile",
+    "startVisit": "Start New Visit",
+    "scheduleAppointment": "Book Appointment",
+    "editDemographics": "Edit Patient",
+    "uploadAttachment": "Upload File",
+    "medicalAlerts": "Medical & Clinical Alerts",
+    "tabs": {
+      "overview": "Overview",
+      "medicalHistory": "Medical History",
+      "dentalHistory": "Dental History",
+      "visits": "Visit Timeline",
+      "attachments": "Attachments & X-Rays"
+    },
+    "nextAppointmentCard": "Next Scheduled Appointment",
+    "lastVisitCard": "Latest Clinical Visit",
+    "timelineTitle": "Chronological Treatment Timeline",
+    "emergencyTitle": "Emergency Contact",
+    "demographicsTitle": "Patient Demographics"
+  },
+  "visitNew": {
+    "title": "Record Clinical Visit",
+    "subtitle": "High-speed documentation of clinical examination, diagnosis, procedures, and media",
+    "patientContext": "Current Patient",
+    "chiefComplaint": "Chief Complaint & History of Present Illness",
+    "clinicalFindings": "Clinical Findings & Intraoral Examination",
+    "diagnosis": "Clinical Diagnosis",
+    "proceduresTitle": "Procedures Performed",
+    "addProcedure": "+ Add Procedure",
+    "procedureName": "Procedure Name",
+    "toothNumber": "Tooth #",
+    "costEGP": "Fee (EGP)",
+    "procedureStatus": "Status",
+    "attachmentsTitle": "Media, X-Rays & Photos",
+    "uploadXray": "Upload Periapical / Panoramic X-Ray",
+    "takePhoto": "Capture Clinical Photo",
+    "uploadDoc": "Attach Document / Lab Slip",
+    "doctorNotes": "Doctor Progress Notes & Instructions",
+    "prescriptions": "Prescribed Medications (Sig / Dose / Duration)",
+    "saveDraft": "Save as Draft",
+    "saveAndComplete": "Save & Complete Visit",
+    "savedNotice": "Visit has been successfully saved to the clinical timeline."
+  },
+  "calendar": {
+    "title": "Clinical Appointments Calendar",
+    "subtitle": "Schedule, track, and manage specialist chair-time across clinic suites",
+    "bookAppointment": "+ Schedule Appointment",
+    "filterDoctor": "Specialist",
+    "views": {
+      "month": "Month",
+      "week": "Week",
+      "day": "Day",
+      "agenda": "Agenda"
+    }
+  },
+  "reservations": {
+    "title": "Reservations Management",
+    "subtitle": "Confirmed and pending patient bookings with real-time status transitions",
+    "filterStatus": "Status Filter",
+    "filterDoctor": "Doctor Filter",
+    "actions": {
+      "confirm": "Confirm",
+      "reschedule": "Reschedule",
+      "cancel": "Cancel",
+      "complete": "Mark Completed",
+      "noShow": "No Show"
+    }
+  },
+  "doctors": {
+    "title": "Dental Specialists Directory",
+    "subtitle": "Clinic staff roster, surgical specializations, and monthly clinical throughput",
+    "activeSpecialists": "Active Specialists",
+    "addDoctor": "+ Add Doctor",
+    "specialization": "Specialization",
+    "activePatients": "Active Patients",
+    "monthlyVisits": "Visits Completed This Month",
+    "phone": "Direct Phone",
+    "status": "Roster Status"
+  },
+  "financials": {
+    "title": "Financial Ledger & Performance",
+    "subtitle": "Immutable transaction ledger, revenue breakdowns, and daily clinic collections",
+    "stats": {
+      "revenue": "Total Revenue (EGP)",
+      "expenses": "Total Expenses (EGP)",
+      "profit": "Net Clinic Profit",
+      "avgCase": "Avg Case Value"
+    },
+    "transactionRegister": "Clinical Transactions Register",
+    "postTransaction": "+ Post Transaction",
+    "table": {
+      "date": "Effective Date",
+      "type": "Type",
+      "category": "Category",
+      "amount": "Amount",
+      "patientDoctor": "Patient / Specialist",
+      "description": "Description",
+      "status": "Status",
+      "reverse": "Reverse Entry"
+    }
+  },
+  "reports": {
+    "title": "Reports & Analytics Center",
+    "subtitle": "Generate and export financial, operational, and clinical throughput reports",
+    "dateRange": "Reporting Period",
+    "exportCSV": "Export CSV",
+    "exportPDF": "Download PDF Report",
+    "revenueReport": "Revenue by Clinical Procedure",
+    "doctorReport": "Doctor Throughput & Productivity",
+    "patientGrowth": "Patient Acquisition Trends"
+  },
+  "activity": {
+    "title": "Security & Clinical Audit Activity",
+    "subtitle": "Tamper-evident log of all clinical modifications, patient lookups, and transactions",
+    "filterRole": "Filter by Role",
+    "search": "Filter audit logs..."
+  },
+  "settings": {
+    "title": "Platform Settings",
+    "subtitle": "Manage clinical defaults, user preferences, security, and clinic configurations",
+    "tabs": {
+      "account": "Account & Security",
+      "clinic": "Clinic Profile",
+      "appearance": "Appearance & Language",
+      "notifications": "Notifications & Alerts"
+    },
+    "clinicName": "Clinic Legal Name",
+    "timezone": "Timezone",
+    "defaultLocale": "Default Interface Language",
+    "currency": "Operational Currency",
+    "save": "Save Preferences"
+  },
+  "common": {
+    "loading": "Loading...",
+    "save": "Save Changes",
+    "cancel": "Cancel",
+    "close": "Close",
+    "statusActive": "Active",
+    "statusPending": "Pending",
+    "statusConfirmed": "Confirmed",
+    "statusCompleted": "Completed",
+    "statusCancelled": "Cancelled",
+    "language": "Language",
+    "search": "Search...",
+    "noRecordsFound": "No records found."
+  }
+}
