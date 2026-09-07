@@ -149,6 +149,8 @@ class Visit(UUIDPrimaryKeyMixin, OrganizationScopedMixin, TimestampMixin, Base):
     status: Mapped[VisitStatus] = mapped_column(
         Enum(VisitStatus, name="visit_status"), nullable=False, default=VisitStatus.DRAFT
     )
+    total_cost_minor: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
+    paid_amount_minor: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
 
     patient: Mapped[Patient] = relationship(back_populates="visits")
     doctor: Mapped["DoctorProfile"] = relationship(back_populates="visits")

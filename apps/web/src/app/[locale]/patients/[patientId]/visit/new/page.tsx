@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Suspense, useEffect, useState } from "react";
+import React, { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { AppShell } from "../../../../../../components/layout/AppShell";
@@ -28,52 +28,29 @@ function NewVisitPageContent() {
   const router = useRouter();
   const locale = (params?.locale as string) || "en";
   const dict = getDictionarySync(locale);
-  const patientId = (params?.patientId as string) || "DOC-000104";
+  const patientId = (params?.patientId as string) || "";
 
   // If chief complaint was passed via reservation / URL query params, pre-fill it!
   const queryComplaint = searchParams?.get("chiefComplaint") || "";
 
-  const [patient, setPatient] = useState<Patient>({
-    id: "new",
-    code: patientId || "DOC-NEW",
-    fullName: "Patient " + (patientId || "Record"),
-    dob: "—",
-    age: 0,
-    gender: "Male" as const,
-    phone: "—",
-    whatsappPhone: "—",
-    email: "—",
-    address: "Cairo, Egypt",
-    emergencyContact: { name: "—", relationship: "—", phone: "—" },
-    assignedDoctor: "Dr. Tarek Omar",
-    status: "Active" as const,
-    lastVisit: "First Visit",
-    nextAppointment: null,
-    medicalAlerts: [],
-    medicalHistory: {
-      allergies: "None reported",
-      conditions: [],
-      medications: "None",
-      surgeries: "None",
-      smokingStatus: "Non-smoker" as const,
-      additionalNotes: "",
-    },
-    dentalHistory: {
-      previousTreatment: "None",
-      extractions: "None",
-      rootCanals: "None",
-      gumProblems: "None",
-      sensitivity: "None",
-      lastVisitDate: "Never",
-    },
-  });
+  const [patient, setPatient] = useState<Patient | null>(null);
+  const [patientLoading, setPatientLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
     async function load() {
-      const p = await fetchPatientById(patientId);
-      if (p) setPatient(p);
+      setPatientLoading(true);
+      try {
+        const p = await fetchPatientById(patientId);
+        if (isMounted) setPatient(p);
+      } finally {
+        if (isMounted) setPatientLoading(false);
+      }
     }
-    load();
+    if (patientId) load();
+    return () => {
+      isMounted = false;
+    };
   }, [patientId]);
 
   const [chiefComplaint, setChiefComplaint] = useState(queryComplaint);
@@ -84,6 +61,21 @@ function NewVisitPageContent() {
 
   const [procedures, setProcedures] = useState<ProcedureRow[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [paidAmount, setPaidAmount] = useState(0);
+  const prevTotalRef = useRef(0);
+
+  const totalCost = procedures.reduce((sum, p) => sum + p.cost, 0);
+  const clampedPaid = Math.max(0, Math.min(paidAmount, totalCost));
+  const remainingBalance = totalCost - clampedPaid;
+
+  useEffect(() => {
+    if (paidAmount === prevTotalRef.current) {
+      setPaidAmount(totalCost);
+    } else if (paidAmount > totalCost) {
+      setPaidAmount(totalCost);
+    }
+    prevTotalRef.current = totalCost;
+  }, [totalCost]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Add procedure from standard fee schedule
   const addProcedureFromCatalog = (item: PriceListItem) => {
@@ -124,13 +116,14 @@ function NewVisitPageContent() {
   };
 
   const handleSave = async () => {
+    if (!patient) return;
     setIsSaving(true);
     try {
       await recordClinicalVisit({
         patientIdentifier: patient.code,
-        chiefComplaint: chiefComplaint || (locale === "ar" ? "فحص وكشف دوري" : "General oral examination"),
-        clinicalFindings: clinicalFindings || (locale === "ar" ? "أنسجة الفم والأسنان ضمن الحدود الطبيعية" : "Normal oral mucosa and dentition"),
-        diagnosis: diagnosis || (locale === "ar" ? "استشارة سريرية" : "Dental consultation"),
+        chiefComplaint: chiefComplaint.trim(),
+        clinicalFindings: clinicalFindings.trim(),
+        diagnosis: diagnosis.trim(),
         doctorNotes,
         prescriptions: prescriptions || "",
         procedures: procedures.map((p) => ({
@@ -139,6 +132,7 @@ function NewVisitPageContent() {
           costEGP: p.cost,
         })),
         status: "Completed",
+        paidEGP: clampedPaid,
       });
       router.push(`/${locale}/patients/${patient.code}`);
     } catch {
@@ -147,8 +141,6 @@ function NewVisitPageContent() {
       setIsSaving(false);
     }
   };
-
-  const totalCost = procedures.reduce((sum, p) => sum + p.cost, 0);
 
   const quickSymptoms = [
     locale === "ar" ? "ألم حاد نابض" : "Severe Throbbing Pain",
@@ -159,6 +151,31 @@ function NewVisitPageContent() {
     locale === "ar" ? "نزيف لثة" : "Bleeding Gums",
   ];
 
+  if (patientLoading) {
+    return (
+      <AppShell locale={locale}>
+        <div className="py-16 text-center text-xs text-secondary">
+          {locale === "ar" ? "جاري تحميل بيانات المريض..." : "Loading patient..."}
+        </div>
+      </AppShell>
+    );
+  }
+
+  if (!patient) {
+    return (
+      <AppShell locale={locale}>
+        <div className="glass-card rounded-2xl border-dashed p-12 text-center space-y-3">
+          <p className="text-sm font-semibold text-primary">
+            {locale === "ar" ? "المريض غير موجود" : "Patient not found"}
+          </p>
+          <Link href={`/${locale}/patients`} className="inline-flex btn-gold mt-2">
+            {dict.nav.patients}
+          </Link>
+        </div>
+      </AppShell>
+    );
+  }
+
   return (
     <AppShell locale={locale}>
           <div className="max-w-4xl mx-auto space-y-6">
@@ -168,12 +185,12 @@ function NewVisitPageContent() {
                   items={[
                     { label: dict.nav.patients, href: `/${locale}/patients` },
                     { label: patient.code, href: `/${locale}/patients/${patient.code}` },
-                    { label: locale === "ar" ? "توثيق زيارة سريرية" : "New Visit" },
+                    { label: dict.visitNew.title },
                   ]}
                 />
               }
-              title={locale === "ar" ? "تسجيل جلسة وعلاج سريري" : "Record Clinical Treatment Session"}
-              subtitle={`${locale === "ar" ? "المريض" : "Patient"}: ${patient.fullName} (${patient.code}) • ${locale === "ar" ? "الطبيب المعالج" : "Treating Doctor"}: ${patient.assignedDoctor}`}
+              title={dict.visitNew.title}
+              subtitle={`${dict.visitNew.patientContext}: ${patient.fullName} (${patient.code})${patient.assignedDoctor ? ` • ${dict.patients.table.assignedDoctor}: ${patient.assignedDoctor}` : ""}`}
             />
 
               {/* Medical Alerts Banner */}
@@ -423,33 +440,57 @@ function NewVisitPageContent() {
 
                 {/* Financial Ledger Attestation Card */}
                 {procedures.length > 0 && (
-                  <div className="rounded-2xl border border-[#caa95a]/40 bg-gradient-to-br from-[#caa95a]/10 via-white to-slate-50 p-4 space-y-2 shadow-xl">
+                  <div className="rounded-2xl border border-[#caa95a]/40 bg-gradient-to-br from-[#caa95a]/10 via-white to-slate-50 p-4 space-y-3 shadow-xl">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b glass-divider pb-3">
                       <div>
                         <span className="text-xs font-semibold text-gold block">
-                          {locale === "ar" ? "الأثر المالي المباشر للجلسة:" : "Session Financial Settlement Impact:"}
+                          {dict.visitNew.totalCost}
                         </span>
                         <span className="text-[11px] text-secondary">
-                          {locale === "ar"
-                            ? "سيتم قيد إيراد المعاملة تلقائياً في الدفتر المالي العام فور الاعتماد"
-                            : "Auto-posts as credited revenue transaction in general ledger upon completion"}
+                          {dict.visitNew.paymentHint}
                         </span>
                       </div>
-
                       <div className="text-end sm:text-right rtl:sm:text-left">
-                        <span className="text-[10px] text-muted block">{locale === "ar" ? "إجمالي قيمة الإجراءات" : "Total Treatment Value"}</span>
                         <span className="text-xl font-mono font-bold text-gold">
-                          {totalCost.toLocaleString()} {locale === "ar" ? "ج.م" : "EGP"}
+                          {totalCost.toLocaleString()} {dict.patientProfile.currency}
                         </span>
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between text-[11px] text-muted pt-1">
-                      <span>{locale === "ar" ? "عدد الإجراءات المدرجة:" : "Procedures Itemized:"} {procedures.length}</span>
-                      <span className="text-gold font-medium">
-                        ✓ {locale === "ar" ? "معتمد بتوقيع الطبيب المعالج" : "Doctor Attestation: Validated"}
-                      </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-secondary mb-1">
+                          {dict.visitNew.amountPaid}
+                        </label>
+                        <input
+                          type="number"
+                          min={0}
+                          max={totalCost}
+                          step={50}
+                          value={clampedPaid}
+                          onChange={(e) => setPaidAmount(Number(e.target.value) || 0)}
+                          className="w-full rounded-lg glass px-3 py-2 text-sm text-primary font-mono font-bold focus:border-[#caa95a] focus:outline-none"
+                        />
+                      </div>
+                      <div className="rounded-xl glass px-3 py-2 flex flex-col justify-center">
+                        <span className="text-[11px] text-secondary">{dict.visitNew.remainingBalance}</span>
+                        <span
+                          className={`text-lg font-mono font-bold ${
+                            remainingBalance > 0 ? "text-rose-500" : "text-emerald-600"
+                          }`}
+                        >
+                          {remainingBalance.toLocaleString()} {dict.patientProfile.currency}
+                        </span>
+                      </div>
                     </div>
+
+                    <p className="text-[11px] text-muted">
+                      {remainingBalance > 0
+                        ? dict.visitNew.partialPayment
+                        : dict.visitNew.fullyPaid}
+                      {" · "}
+                      {procedures.length} {locale === "ar" ? "إجراءات" : "procedures"}
+                    </p>
                   </div>
                 )}
               </div>
@@ -487,7 +528,8 @@ function NewVisitPageContent() {
             <span className="text-secondary">{locale === "ar" ? "توثيق لجلسة: " : "Documenting: "}</span>
             <strong className="text-primary">{patient.fullName}</strong>
             <span className="font-mono text-gold ms-2 font-bold">
-              • {totalCost.toLocaleString()} {locale === "ar" ? "ج.م" : "EGP"}
+              • {clampedPaid.toLocaleString()}/{totalCost.toLocaleString()} {dict.patientProfile.currency}
+              {remainingBalance > 0 ? ` (${dict.visitNew.remainingBalance}: ${remainingBalance.toLocaleString()})` : ""}
             </span>
           </div>
 

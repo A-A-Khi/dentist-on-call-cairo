@@ -42,6 +42,7 @@ export interface PatientRecord {
 export interface ClinicalVisit {
   id: string;
   patientId: string;
+  patientName?: string;
   doctorName: string;
   date: string;
   time: string;
@@ -68,6 +69,9 @@ export interface ClinicalVisit {
   doctorNotes: string;
   prescriptions?: string[];
   status: "Completed" | "Draft";
+  totalCostEGP?: number;
+  paidAmountEGP?: number;
+  remainingEGP?: number;
 }
 
 export interface AppointmentRecord {

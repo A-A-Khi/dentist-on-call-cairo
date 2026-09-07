@@ -256,9 +256,22 @@ export interface CreateVisitInput {
   prescriptions: string;
   procedures: { name: string; toothNumber?: string; costEGP: number }[];
   status?: "Completed" | "Draft";
+  paidEGP?: number;
+}
+
+function visitPaymentFields(procedures: { costEGP: number }[], paidEGP?: number) {
+  const totalCostEGP = procedures.reduce((sum, p) => sum + (p.costEGP || 0), 0);
+  const paidAmountEGP =
+    paidEGP === undefined ? totalCostEGP : Math.max(0, Math.min(paidEGP, totalCostEGP));
+  return {
+    totalCostEGP,
+    paidAmountEGP,
+    remainingEGP: totalCostEGP - paidAmountEGP,
+  };
 }
 
 export async function recordClinicalVisit(input: CreateVisitInput): Promise<{ id: string; status: string }> {
+  const payment = visitPaymentFields(input.procedures, input.paidEGP);
   try {
     const response = await apiClient<{ id: string; status: string }>(
       `/patients/${encodeURIComponent(input.patientIdentifier)}/visits`,
@@ -276,6 +289,7 @@ export async function recordClinicalVisit(input: CreateVisitInput): Promise<{ id
             cost_egp: p.costEGP || 0,
           })),
           status: input.status || "Completed",
+          paid_egp: payment.paidAmountEGP,
         }),
       }
     );
@@ -302,12 +316,11 @@ export async function recordClinicalVisit(input: CreateVisitInput): Promise<{ id
       doctorNotes: input.doctorNotes || "—",
       prescriptions: input.prescriptions ? [input.prescriptions] : [],
       status: "Completed",
+      ...payment,
     };
     setLocal(STORAGE_KEYS.VISITS, [newVisit, ...existing]);
 
-    // Financial revenue posting
-    const totalCost = input.procedures.reduce((sum, p) => sum + (p.costEGP || 0), 0);
-    if (totalCost > 0) {
+    if (payment.paidAmountEGP > 0) {
       const existingTx = getLocal<FinancialTransaction[]>(STORAGE_KEYS.FINANCIALS, []);
       const procList = input.procedures.map((p) => `${p.name}${p.toothNumber ? ` (#${p.toothNumber})` : ""}`).join(", ");
       const newTx: FinancialTransaction = {
@@ -315,11 +328,14 @@ export async function recordClinicalVisit(input: CreateVisitInput): Promise<{ id
         date: new Date().toISOString().split("T")[0],
         type: "REVENUE",
         category: "Clinical Procedures",
-        amountEGP: totalCost,
+        amountEGP: payment.paidAmountEGP,
         patientName: input.patientIdentifier,
         patientCode: input.patientIdentifier,
         doctorName: "Dr. Tarek Omar",
-        description: `Procedures: ${procList}`,
+        description:
+          payment.remainingEGP > 0
+            ? `Partial payment ${payment.paidAmountEGP}/${payment.totalCostEGP} EGP: ${procList}`
+            : `Procedures: ${procList}`,
         status: "POSTED",
       };
       setLocal(STORAGE_KEYS.FINANCIALS, [newTx, ...existingTx]);
@@ -349,12 +365,11 @@ export async function recordClinicalVisit(input: CreateVisitInput): Promise<{ id
       doctorNotes: input.doctorNotes || "—",
       prescriptions: input.prescriptions ? [input.prescriptions] : [],
       status: "Completed",
+      ...payment,
     };
     setLocal(STORAGE_KEYS.VISITS, [newVisit, ...existing]);
 
-    // Financial revenue posting on local fallback
-    const totalCost = input.procedures.reduce((sum, p) => sum + (p.costEGP || 0), 0);
-    if (totalCost > 0) {
+    if (payment.paidAmountEGP > 0) {
       const existingTx = getLocal<FinancialTransaction[]>(STORAGE_KEYS.FINANCIALS, []);
       const procList = input.procedures.map((p) => `${p.name}${p.toothNumber ? ` (#${p.toothNumber})` : ""}`).join(", ");
       const newTx: FinancialTransaction = {
@@ -362,11 +377,14 @@ export async function recordClinicalVisit(input: CreateVisitInput): Promise<{ id
         date: new Date().toISOString().split("T")[0],
         type: "REVENUE",
         category: "Clinical Procedures",
-        amountEGP: totalCost,
+        amountEGP: payment.paidAmountEGP,
         patientName: input.patientIdentifier,
         patientCode: input.patientIdentifier,
         doctorName: "Dr. Tarek Omar",
-        description: `Procedures: ${procList}`,
+        description:
+          payment.remainingEGP > 0
+            ? `Partial payment ${payment.paidAmountEGP}/${payment.totalCostEGP} EGP: ${procList}`
+            : `Procedures: ${procList}`,
         status: "POSTED",
       };
       setLocal(STORAGE_KEYS.FINANCIALS, [newTx, ...existingTx]);
@@ -374,6 +392,112 @@ export async function recordClinicalVisit(input: CreateVisitInput): Promise<{ id
 
     return { id, status: "Completed" };
   }
+}
+
+export async function recordVisitPayment(
+  visitId: string,
+  amountEGP: number
+): Promise<{ id: string; totalCostEGP: number; paidAmountEGP: number; remainingEGP: number }> {
+  try {
+    const response = await apiClient<{
+      id: string;
+      totalCostEGP: number;
+      paidAmountEGP: number;
+      remainingEGP: number;
+    }>(`/visits/${encodeURIComponent(visitId)}/payments`, {
+      method: "POST",
+      body: JSON.stringify({ amount_egp: amountEGP }),
+    });
+
+    const visits = getLocal<Visit[]>(STORAGE_KEYS.VISITS, []);
+    const updated = visits.map((v) =>
+      v.id === visitId
+        ? {
+            ...v,
+            totalCostEGP: response.totalCostEGP,
+            paidAmountEGP: response.paidAmountEGP,
+            remainingEGP: response.remainingEGP,
+          }
+        : v
+    );
+    setLocal(STORAGE_KEYS.VISITS, updated);
+
+    if (amountEGP > 0) {
+      const existingTx = getLocal<FinancialTransaction[]>(STORAGE_KEYS.FINANCIALS, []);
+      const visit = updated.find((v) => v.id === visitId);
+      const newTx: FinancialTransaction = {
+        id: `TX-${Date.now().toString().slice(-6)}`,
+        date: new Date().toISOString().split("T")[0],
+        type: "REVENUE",
+        category: "Clinical Procedures",
+        amountEGP,
+        patientName: visit?.patientName || visit?.patientId,
+        patientCode: visit?.patientId,
+        doctorName: visit?.doctorName,
+        description: `Visit balance payment ${amountEGP} EGP (remaining ${response.remainingEGP})`,
+        status: "POSTED",
+      };
+      setLocal(STORAGE_KEYS.FINANCIALS, [newTx, ...existingTx]);
+    }
+
+    return response;
+  } catch {
+    const visits = getLocal<Visit[]>(STORAGE_KEYS.VISITS, []);
+    const visit = visits.find((v) => v.id === visitId);
+    if (!visit) {
+      throw new Error("Visit not found");
+    }
+    const total =
+      visit.totalCostEGP ??
+      visit.procedures.reduce((sum, p) => sum + (p.costEGP || 0), 0);
+    const paid = visit.paidAmountEGP ?? total;
+    const remaining = Math.max(total - paid, 0);
+    if (amountEGP <= 0 || amountEGP > remaining) {
+      throw new Error("Invalid payment amount");
+    }
+    const paidAmountEGP = paid + amountEGP;
+    const remainingEGP = total - paidAmountEGP;
+    const updated = visits.map((v) =>
+      v.id === visitId
+        ? { ...v, totalCostEGP: total, paidAmountEGP, remainingEGP }
+        : v
+    );
+    setLocal(STORAGE_KEYS.VISITS, updated);
+
+    const existingTx = getLocal<FinancialTransaction[]>(STORAGE_KEYS.FINANCIALS, []);
+    const newTx: FinancialTransaction = {
+      id: `TX-${Date.now().toString().slice(-6)}`,
+      date: new Date().toISOString().split("T")[0],
+      type: "REVENUE",
+      category: "Clinical Procedures",
+      amountEGP,
+      patientName: visit.patientName || visit.patientId,
+      patientCode: visit.patientId,
+      doctorName: visit.doctorName,
+      description: `Visit balance payment ${amountEGP} EGP (remaining ${remainingEGP})`,
+      status: "POSTED",
+    };
+    setLocal(STORAGE_KEYS.FINANCIALS, [newTx, ...existingTx]);
+
+    return { id: visitId, totalCostEGP: total, paidAmountEGP, remainingEGP };
+  }
+}
+
+export async function fetchOutstandingVisits(): Promise<Visit[]> {
+  try {
+    const data = await apiClient<Visit[]>("/visits/outstanding");
+    if (Array.isArray(data)) {
+      return data;
+    }
+  } catch {
+    // Fallback
+  }
+  return getLocal<Visit[]>(STORAGE_KEYS.VISITS, []).filter((v) => {
+    const total =
+      v.totalCostEGP ?? v.procedures.reduce((sum, p) => sum + (p.costEGP || 0), 0);
+    const paid = v.paidAmountEGP ?? total;
+    return total > 0 && paid < total;
+  });
 }
 
 // -----------------------------
