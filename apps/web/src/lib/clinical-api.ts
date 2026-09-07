@@ -1,5 +1,14 @@
 import { apiClient } from "./api-client";
-import type { Appointment, AuditLogRecord, Doctor, FinancialTransaction, Patient, Visit } from "./clinical-data";
+import type {
+  Appointment,
+  AuditLogRecord,
+  CaseStream,
+  Doctor,
+  FinancialCategory,
+  FinancialTransaction,
+  Patient,
+  Visit,
+} from "./clinical-data";
 
 const STORAGE_KEYS = {
   PATIENTS: "doc_clinical_patients",
@@ -93,6 +102,7 @@ export interface CreatePatientInput {
   whatsappPhone?: string;
   email?: string;
   address?: string;
+  sourceStreamId?: string;
   emergencyContact?: { name: string; relationship: string; phone: string };
   assignedDoctorId?: string;
   medicalHistory?: {
@@ -125,6 +135,7 @@ export async function createPatientRecord(input: CreatePatientInput): Promise<{ 
         whatsapp_phone: input.whatsappPhone || null,
         email: input.email || null,
         address: input.address || null,
+        source_stream_id: input.sourceStreamId || null,
         emergency_contact: input.emergencyContact || null,
         assigned_doctor_id: input.assignedDoctorId || null,
         medical_history: input.medicalHistory || null,
@@ -150,6 +161,8 @@ export async function createPatientRecord(input: CreatePatientInput): Promise<{ 
       status: "Active",
       lastVisit: new Date().toISOString().split("T")[0],
       nextAppointment: null,
+      sourceStreamId: input.sourceStreamId || null,
+      sourceStream: null,
       medicalAlerts: input.medicalHistory?.allergies ? [`Allergy: ${input.medicalHistory.allergies}`] : [],
       medicalHistory: {
         allergies: input.medicalHistory?.allergies || "None reported",
@@ -192,6 +205,8 @@ export async function createPatientRecord(input: CreatePatientInput): Promise<{ 
       status: "Active",
       lastVisit: new Date().toISOString().split("T")[0],
       nextAppointment: null,
+      sourceStreamId: input.sourceStreamId || null,
+      sourceStream: null,
       medicalAlerts: input.medicalHistory?.allergies ? [`Allergy: ${input.medicalHistory.allergies}`] : [],
       medicalHistory: {
         allergies: input.medicalHistory?.allergies || "None reported",
@@ -443,11 +458,59 @@ export async function fetchFinancialTransactions(): Promise<FinancialTransaction
   return getLocal<FinancialTransaction[]>(STORAGE_KEYS.FINANCIALS, []);
 }
 
+export async function fetchFinancialCategories(
+  type?: "REVENUE" | "EXPENSE",
+  includeInactive = false
+): Promise<FinancialCategory[]> {
+  try {
+    const params = new URLSearchParams();
+    if (type) params.set("type", type);
+    if (includeInactive) params.set("include_inactive", "true");
+    const qs = params.toString();
+    const endpoint = qs ? `/financials/categories?${qs}` : "/financials/categories";
+    const data = await apiClient<FinancialCategory[]>(endpoint);
+    if (Array.isArray(data)) return data;
+  } catch {
+    // Fallback
+  }
+  return [];
+}
+
+export async function createFinancialCategory(input: {
+  transactionType: "REVENUE" | "EXPENSE";
+  nameEn: string;
+  nameAr?: string;
+}): Promise<FinancialCategory> {
+  return apiClient<FinancialCategory>("/financials/categories", {
+    method: "POST",
+    body: JSON.stringify({
+      transaction_type: input.transactionType,
+      name_en: input.nameEn,
+      name_ar: input.nameAr || null,
+    }),
+  });
+}
+
+export async function updateFinancialCategory(
+  id: string,
+  input: { nameEn?: string; nameAr?: string; isActive?: boolean }
+): Promise<FinancialCategory> {
+  return apiClient<FinancialCategory>(`/financials/categories/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({
+      name_en: input.nameEn,
+      name_ar: input.nameAr,
+      is_active: input.isActive,
+    }),
+  });
+}
+
 export async function postFinancialTransaction(input: {
   type: "REVENUE" | "EXPENSE";
   amountEGP: number;
   description: string;
   patientIdOrCode?: string;
+  categoryId?: string;
   categoryName?: string;
 }): Promise<{ id: string; status: string }> {
   try {
@@ -458,7 +521,8 @@ export async function postFinancialTransaction(input: {
         amount_egp: input.amountEGP,
         description: input.description,
         patient_id_or_code: input.patientIdOrCode || null,
-        category_name: input.categoryName || (input.type === "REVENUE" ? "Clinical Treatment" : "Operating Expense"),
+        category_id: input.categoryId || null,
+        category_name: input.categoryName || null,
       }),
     });
     return response;
@@ -470,6 +534,7 @@ export async function postFinancialTransaction(input: {
       date: new Date().toISOString().split("T")[0],
       type: input.type,
       category: input.categoryName || (input.type === "REVENUE" ? "Clinical Treatment" : "Operating Expense"),
+      categoryId: input.categoryId,
       amountEGP: input.amountEGP,
       patientName: input.patientIdOrCode ? "Patient" : undefined,
       patientCode: input.patientIdOrCode,
@@ -480,6 +545,44 @@ export async function postFinancialTransaction(input: {
     setLocal(STORAGE_KEYS.FINANCIALS, [newTx, ...existing]);
     return { id, status: "POSTED" };
   }
+}
+
+export async function fetchCaseStreams(includeInactive = false): Promise<CaseStream[]> {
+  try {
+    const endpoint = includeInactive ? "/case-streams?include_inactive=true" : "/case-streams";
+    const data = await apiClient<CaseStream[]>(endpoint);
+    if (Array.isArray(data)) return data;
+  } catch {
+    // Fallback
+  }
+  return [];
+}
+
+export async function createCaseStream(input: {
+  nameEn: string;
+  nameAr?: string;
+}): Promise<CaseStream> {
+  return apiClient<CaseStream>("/case-streams", {
+    method: "POST",
+    body: JSON.stringify({
+      name_en: input.nameEn,
+      name_ar: input.nameAr || null,
+    }),
+  });
+}
+
+export async function updateCaseStream(
+  id: string,
+  input: { nameEn?: string; nameAr?: string; isActive?: boolean }
+): Promise<CaseStream> {
+  return apiClient<CaseStream>(`/case-streams/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({
+      name_en: input.nameEn,
+      name_ar: input.nameAr,
+      is_active: input.isActive,
+    }),
+  });
 }
 
 // -----------------------------

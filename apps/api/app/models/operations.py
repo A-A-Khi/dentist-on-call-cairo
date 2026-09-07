@@ -84,6 +84,17 @@ class FinancialCategory(UUIDPrimaryKeyMixin, OrganizationScopedMixin, TimestampM
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
 
+class CaseStream(UUIDPrimaryKeyMixin, OrganizationScopedMixin, TimestampMixin, Base):
+    """Acquisition / referral stream a registered case came from."""
+
+    __tablename__ = "case_streams"
+    __table_args__ = (UniqueConstraint("organization_id", "name_en", name="uq_case_streams_organization_name_en"),)
+
+    name_en: Mapped[str] = mapped_column(String(160), nullable=False)
+    name_ar: Mapped[str | None] = mapped_column(String(160))
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+
+
 class FinancialTransaction(UUIDPrimaryKeyMixin, OrganizationScopedMixin, TimestampMixin, Base):
     __tablename__ = "financial_transactions"
 

@@ -47,6 +47,9 @@ class Patient(UUIDPrimaryKeyMixin, OrganizationScopedMixin, TimestampMixin, Base
     address: Mapped[str | None] = mapped_column(Text)
     emergency_contact: Mapped[dict[str, str] | None] = mapped_column(JSONB)
     notes: Mapped[str | None] = mapped_column(Text)
+    source_stream_id: Mapped[UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True), ForeignKey("case_streams.id", ondelete="SET NULL")
+    )
     status: Mapped[PatientStatus] = mapped_column(
         Enum(PatientStatus, name="patient_status"), nullable=False, default=PatientStatus.ACTIVE
     )

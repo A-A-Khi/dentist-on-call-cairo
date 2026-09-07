@@ -121,6 +121,15 @@ export default function PatientProfilePage() {
                       <span className="font-mono">{patient.phone}</span>
                       <span>•</span>
                       <span>{dict.patients.table.assignedDoctor}: <strong className="text-primary">{patient.assignedDoctor}</strong></span>
+                      {patient.sourceStream && (
+                        <>
+                          <span>•</span>
+                          <span>
+                            {locale === "ar" ? "القناة" : "Stream"}:{" "}
+                            <strong className="text-primary">{patient.sourceStream}</strong>
+                          </span>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>

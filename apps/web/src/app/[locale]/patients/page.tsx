@@ -138,6 +138,11 @@ function PatientsPageContent() {
                       <td className="px-4 py-3.5 font-mono text-gold font-medium">{p.code}</td>
                       <td className="px-4 py-3.5">
                         <div className="font-semibold text-primary">{p.fullName}</div>
+                        {p.sourceStream && (
+                          <span className="inline-block mt-0.5 text-[10px] text-gold font-medium">
+                            {p.sourceStream}
+                          </span>
+                        )}
                         {p.medicalAlerts && p.medicalAlerts.length > 0 && (
                           <span className="inline-block mt-0.5 text-[10px] text-amber-400 font-medium">
                             ⚠ {p.medicalAlerts[0]}
@@ -216,7 +221,13 @@ function PatientsPageContent() {
                   )}
 
                   <div className="flex items-center justify-between pt-2 border-t glass-divider/60 text-xs text-secondary">
-                    <span>{dict.patients.table.assignedDoctor}: <strong className="text-primary">{p.assignedDoctor}</strong></span>
+                      <span>{dict.patients.table.assignedDoctor}: <strong className="text-primary">{p.assignedDoctor}</strong></span>
+                      {p.sourceStream && (
+                        <span>
+                          {locale === "ar" ? "القناة" : "Stream"}:{" "}
+                          <strong className="text-primary">{p.sourceStream}</strong>
+                        </span>
+                      )}
                     <span>{dict.patients.table.lastVisit}: {p.lastVisit}</span>
                   </div>
 

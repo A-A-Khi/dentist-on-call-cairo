@@ -9,6 +9,8 @@ export interface PatientRecord {
   whatsappPhone: string;
   email: string;
   address: string;
+  sourceStreamId?: string | null;
+  sourceStream?: string | null;
   emergencyContact: {
     name: string;
     relationship: string;
@@ -100,12 +102,28 @@ export interface FinancialRecord {
   date: string;
   type: "REVENUE" | "EXPENSE";
   category: string;
+  categoryId?: string;
   amountEGP: number;
   patientName?: string;
   patientCode?: string;
   doctorName?: string;
   description: string;
   status: "POSTED" | "VOIDED";
+}
+
+export interface FinancialCategory {
+  id: string;
+  transactionType: "REVENUE" | "EXPENSE";
+  nameEn: string;
+  nameAr?: string | null;
+  isActive: boolean;
+}
+
+export interface CaseStream {
+  id: string;
+  nameEn: string;
+  nameAr?: string | null;
+  isActive: boolean;
 }
 
 export interface AuditLogRecord {

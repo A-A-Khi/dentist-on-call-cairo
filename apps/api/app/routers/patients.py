@@ -10,6 +10,7 @@ from app.auth.dependencies import CurrentUser, DatabaseSession, require_csrf
 from app.models.audit import AuditLog
 from app.models.enums import PatientStatus
 from app.models.identity import DoctorProfile, User
+from app.models.operations import CaseStream
 from app.models.patients import (
     DentalHistory,
     MedicalHistory,
@@ -54,9 +55,17 @@ class PatientCreateRequest(BaseModel):
     address: str | None = None
     emergency_contact: EmergencyContact | None = None
     notes: str | None = None
+    source_stream_id: UUID | None = None
     assigned_doctor_id: UUID | None = None
     medical_history: MedicalHistoryPayload | None = None
     dental_history: DentalHistoryPayload | None = None
+
+
+def _stream_name(session: DatabaseSession, stream_id: UUID | None) -> str | None:
+    if not stream_id:
+        return None
+    stream = session.get(CaseStream, stream_id)
+    return stream.name_en if stream else None
 
 
 def _calculate_age(dob: date | None) -> int:
@@ -140,6 +149,8 @@ def list_patients(
                 "whatsappPhone": p.whatsapp_phone or "—",
                 "email": p.email or "",
                 "address": p.address or "",
+                "sourceStreamId": str(p.source_stream_id) if p.source_stream_id else None,
+                "sourceStream": _stream_name(session, p.source_stream_id),
                 "assignedDoctor": doctor_name,
                 "status": "Active" if p.status == PatientStatus.ACTIVE else p.status.value,
                 "lastVisit": p.created_at.strftime("%Y-%m-%d"),
@@ -165,6 +176,16 @@ def create_patient(
     patient_number = (max_num or 100) + 1
     patient_code = f"DOC-{patient_number:06d}"
 
+    source_stream_id = payload.source_stream_id
+    if source_stream_id is not None:
+        stream = session.get(CaseStream, source_stream_id)
+        if (
+            stream is None
+            or stream.organization_id != current_user.organization_id
+            or not stream.is_active
+        ):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid case stream.")
+
     patient = Patient(
         id=uuid4(),
         organization_id=current_user.organization_id,
@@ -179,6 +200,7 @@ def create_patient(
         address=payload.address,
         emergency_contact=payload.emergency_contact.model_dump() if payload.emergency_contact else None,
         notes=payload.notes,
+        source_stream_id=source_stream_id,
         status=PatientStatus.ACTIVE,
     )
     session.add(patient)
@@ -249,6 +271,7 @@ def create_patient(
         metadata_json={
             "patient_code": patient.patient_code,
             "full_name": patient.full_name,
+            "source_stream_id": str(source_stream_id) if source_stream_id else None,
         },
     )
     session.add(audit)
@@ -259,6 +282,8 @@ def create_patient(
         "code": patient.patient_code,
         "fullName": patient.full_name,
         "status": patient.status.value,
+        "sourceStreamId": str(source_stream_id) if source_stream_id else None,
+        "sourceStream": _stream_name(session, source_stream_id),
     }
 
 
@@ -320,6 +345,8 @@ def get_patient(
         "whatsappPhone": patient.whatsapp_phone or "—",
         "email": patient.email or "",
         "address": patient.address or "",
+        "sourceStreamId": str(patient.source_stream_id) if patient.source_stream_id else None,
+        "sourceStream": _stream_name(session, patient.source_stream_id),
         "emergencyContact": patient.emergency_contact or {"name": "—", "relationship": "—", "phone": "—"},
         "assignedDoctor": doctor_name,
         "status": "Active" if patient.status == PatientStatus.ACTIVE else patient.status.value,

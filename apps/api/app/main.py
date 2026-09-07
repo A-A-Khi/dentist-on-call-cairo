@@ -9,6 +9,7 @@ from app.core.config import get_settings
 from app.routers.appointments import router as appointments_router
 from app.routers.audit import router as audit_router
 from app.routers.auth import router as auth_router
+from app.routers.case_streams import router as case_streams_router
 from app.routers.doctors import router as doctors_router
 from app.routers.financials import router as financials_router
 from app.routers.health import router as health_router
@@ -26,8 +27,37 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
             from app.database.base import Base
             from app.database.seed import seed_database
             from app.database.session import engine
+            import app.models  # noqa: F401
+            from sqlalchemy import text
 
             Base.metadata.create_all(bind=engine)
+            # Lightweight forward-compat for existing local DBs (create_all does not ALTER).
+            with engine.begin() as conn:
+                conn.execute(
+                    text(
+                        """
+                        CREATE TABLE IF NOT EXISTS case_streams (
+                          id uuid PRIMARY KEY,
+                          organization_id uuid NOT NULL REFERENCES organizations(id) ON DELETE RESTRICT,
+                          name_en varchar(160) NOT NULL,
+                          name_ar varchar(160),
+                          is_active boolean NOT NULL DEFAULT true,
+                          created_at timestamptz NOT NULL DEFAULT now(),
+                          updated_at timestamptz NOT NULL DEFAULT now(),
+                          CONSTRAINT uq_case_streams_organization_name_en UNIQUE (organization_id, name_en)
+                        )
+                        """
+                    )
+                )
+                conn.execute(
+                    text(
+                        """
+                        ALTER TABLE patients
+                          ADD COLUMN IF NOT EXISTS source_stream_id uuid
+                          REFERENCES case_streams(id) ON DELETE SET NULL
+                        """
+                    )
+                )
             seed_database()
         except Exception as exc:
             import logging
@@ -88,6 +118,7 @@ app.include_router(patients_router, prefix="/api/v1")
 app.include_router(visits_router, prefix="/api/v1")
 app.include_router(appointments_router, prefix="/api/v1")
 app.include_router(financials_router, prefix="/api/v1")
+app.include_router(case_streams_router, prefix="/api/v1")
 app.include_router(doctors_router, prefix="/api/v1")
 app.include_router(audit_router, prefix="/api/v1")
 

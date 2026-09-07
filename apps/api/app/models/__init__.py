@@ -13,6 +13,7 @@ from app.models.notifications import Notification, OutboxEvent, PushSubscription
 from app.models.operations import (
     Attachment,
     AttachmentAccessEvent,
+    CaseStream,
     FinancialCategory,
     FinancialTransaction,
     ProcedureCatalog,
@@ -37,6 +38,7 @@ __all__ = [
     "AttachmentAccessEvent",
     "AuthLoginAttempt",
     "AuditLog",
+    "CaseStream",
     "DentalHistory",
     "DoctorProfile",
     "FinancialCategory",

@@ -138,6 +138,7 @@
     "emergencyRelation": "Relationship",
     "emergencyPhone": "Emergency Contact Phone",
     "chiefComplaintInitial": "Initial Chief Complaint / Dental Concern",
+    "caseStream": "Case Stream / Source",
     "submitButton": "Complete Registration & Open Chart",
     "cancelButton": "Cancel Registration"
   },
@@ -268,9 +269,15 @@
     "tabs": {
       "account": "Account & Security",
       "clinic": "Clinic Profile",
+      "categories": "Expense Categories",
+      "streams": "Case Streams",
       "appearance": "Appearance & Language",
       "notifications": "Notifications & Alerts"
     },
+    "categoriesTitle": "Financial Categories",
+    "categoriesHelp": "Define expense and revenue categories (e.g. Social Media Ads, Materials) used when posting ledger entries.",
+    "streamsTitle": "Case Acquisition Streams",
+    "streamsHelp": "Define where registered cases come from (e.g. Social Media Ads, Partnership Clinics) for selection at registration.",
     "clinicName": "Clinic Legal Name",
     "timezone": "Timezone",
     "defaultLocale": "Default Interface Language",

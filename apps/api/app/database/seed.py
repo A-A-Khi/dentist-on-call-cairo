@@ -7,7 +7,7 @@ from app.auth.security import hash_password
 from app.database.session import get_session_factory
 from app.models.enums import DoctorStatus, TransactionType, UserRole
 from app.models.identity import DoctorProfile, Organization, User
-from app.models.operations import FinancialCategory, ProcedureCatalog
+from app.models.operations import CaseStream, FinancialCategory, ProcedureCatalog
 from app.models.settings import SystemSetting
 
 
@@ -118,9 +118,12 @@ def seed_database() -> None:
         categories = [
             (TransactionType.REVENUE, "Clinical Services", "خدمات علاجية"),
             (TransactionType.REVENUE, "Emergency Care", "خدمات طوارئ"),
+            (TransactionType.EXPENSE, "Social Media Ads", "إعلانات وسائل التواصل"),
+            (TransactionType.EXPENSE, "Materials", "مواد ومستلزمات"),
             (TransactionType.EXPENSE, "Dental Supplies & Consumables", "مستلزمات ومواد طبية"),
             (TransactionType.EXPENSE, "Dental Laboratory Fees", "مصاريف معامل الأسنان"),
             (TransactionType.EXPENSE, "Clinic Operating Overhead", "مصاريف تشغيلية"),
+            (TransactionType.EXPENSE, "Partnerships & Referrals", "شراكات وإحالات"),
         ]
         for tx_type, name_en, name_ar in categories:
             cat = session.scalar(
@@ -141,6 +144,32 @@ def seed_database() -> None:
                     )
                 )
         print("[Seed] Financial categories verified.")
+
+        # 5b. Case Streams (patient acquisition sources)
+        streams = [
+            ("Social Media Ads", "إعلانات وسائل التواصل"),
+            ("Partnership Clinics", "عيادات شريكة"),
+            ("Walk-in", "حضور مباشر"),
+            ("Patient Referral", "إحالة من مريض"),
+            ("Emergency Hotline", "خط الطوارئ"),
+        ]
+        for name_en, name_ar in streams:
+            stream = session.scalar(
+                select(CaseStream).where(
+                    CaseStream.organization_id == org.id,
+                    CaseStream.name_en == name_en,
+                )
+            )
+            if stream is None:
+                session.add(
+                    CaseStream(
+                        organization_id=org.id,
+                        name_en=name_en,
+                        name_ar=name_ar,
+                        is_active=True,
+                    )
+                )
+        print("[Seed] Case streams verified.")
 
         # 6. Default Settings
         settings_data = [

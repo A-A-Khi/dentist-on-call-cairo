@@ -167,8 +167,18 @@ def create_visit(
             select(FinancialCategory).where(
                 FinancialCategory.organization_id == current_user.organization_id,
                 FinancialCategory.transaction_type == TransactionType.REVENUE,
+                FinancialCategory.is_active.is_(True),
+                FinancialCategory.name_en == "Clinical Services",
             ).limit(1)
         )
+        if not cat:
+            cat = session.scalar(
+                select(FinancialCategory).where(
+                    FinancialCategory.organization_id == current_user.organization_id,
+                    FinancialCategory.transaction_type == TransactionType.REVENUE,
+                    FinancialCategory.is_active.is_(True),
+                ).limit(1)
+            )
         if cat:
             proc_details = [
                 f"{p.name} (#{p.tooth_number})" if p.tooth_number else p.name
