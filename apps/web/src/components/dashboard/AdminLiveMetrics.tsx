@@ -4,12 +4,13 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { Card, CardHeader, CardTitle } from "../ui/Card";
 import { Badge } from "../ui/Badge";
+import type { Dictionary } from "../../i18n/get-dictionary";
 import { fetchAppointments, fetchFinancialTransactions, fetchPatients } from "../../lib/clinical-api";
 import type { Appointment, FinancialTransaction, Patient } from "../../lib/clinical-data";
 
 interface AdminLiveMetricsProps {
   locale: string;
-  dict: any;
+  dict: Dictionary;
 }
 
 export function AdminLiveMetrics({ locale, dict }: AdminLiveMetricsProps) {

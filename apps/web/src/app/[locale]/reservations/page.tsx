@@ -142,7 +142,7 @@ export default function ReservationsPage() {
                         <div className="font-semibold text-primary">{r.procedure}</div>
                         {r.chiefComplaint && r.chiefComplaint !== r.procedure && (
                           <div className="text-[10px] text-gold italic mt-0.5 max-w-xs truncate">
-                            "{r.chiefComplaint}"
+                            &ldquo;{r.chiefComplaint}&rdquo;
                           </div>
                         )}
                       </td>
@@ -199,7 +199,7 @@ export default function ReservationsPage() {
                       <strong className="text-gold font-medium">{r.procedure}</strong>
                     </p>
                     {r.chiefComplaint && r.chiefComplaint !== r.procedure && (
-                      <p className="text-[11px] text-secondary italic">"{r.chiefComplaint}"</p>
+                      <p className="text-[11px] text-secondary italic">&ldquo;{r.chiefComplaint}&rdquo;</p>
                     )}
                   </div>
 

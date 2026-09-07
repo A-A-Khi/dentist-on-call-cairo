@@ -32,7 +32,19 @@ export default function FinancialsPage() {
   };
 
   useEffect(() => {
-    loadData();
+    let cancelled = false;
+    async function load() {
+      try {
+        const data = await fetchFinancialTransactions();
+        if (!cancelled) setTransactions(data);
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    }
+    void load();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const totalRevenue = transactions

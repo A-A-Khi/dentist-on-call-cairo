@@ -18,12 +18,9 @@ export interface AppShellProps {
 
 export function AppShell({ locale, role: roleProp, children }: AppShellProps) {
   const dict = getDictionarySync(locale);
-  const [session, setSession] = useState<SessionUser | null>(null);
+  const [session, setSession] = useState<SessionUser | null>(() => getStoredSessionUser());
 
   useEffect(() => {
-    const stored = getStoredSessionUser();
-    if (stored) setSession(stored);
-
     let cancelled = false;
     getCurrentUser()
       .then((user) => {

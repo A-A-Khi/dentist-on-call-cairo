@@ -404,11 +404,11 @@ export default function PatientProfilePage() {
                             {locale === "ar" ? "الإجراءات المنفذة والتسعير السريري" : "Procedures Completed & Clinical Fees"}
                           </span>
                           <span className="font-mono text-xs font-bold text-gold">
-                            {v.procedures.reduce((s: number, p: any) => s + (p.costEGP || 0), 0).toLocaleString()} {locale === "ar" ? "ج.م" : "EGP"}
+                            {v.procedures.reduce((s, p) => s + (p.costEGP || 0), 0).toLocaleString()} {locale === "ar" ? "ج.م" : "EGP"}
                           </span>
                         </div>
                         <div className="divide-y divide-slate-200 text-xs">
-                          {v.procedures.map((p: any) => (
+                          {v.procedures.map((p) => (
                             <div key={p.id} className="py-2 flex items-center justify-between">
                               <div>
                                 <span className="font-semibold text-primary">{p.name}</span>

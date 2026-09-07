@@ -27,6 +27,25 @@ function setLocal<T>(key: string, val: T): void {
   }
 }
 
+type SmokingStatus = Patient["medicalHistory"]["smokingStatus"];
+
+function asSmokingStatus(value?: string): SmokingStatus {
+  if (value === "Smoker" || value === "Former smoker" || value === "Non-smoker") {
+    return value;
+  }
+  return "Non-smoker";
+}
+
+interface AuditLogApiRow {
+  id: string;
+  actor_user_id?: string | null;
+  actor_role?: "ADMIN" | "DOCTOR" | null;
+  action: string;
+  target_id?: string | null;
+  occurred_at: string;
+  description?: string | null;
+}
+
 // -----------------------------
 // PATIENTS API
 // -----------------------------
@@ -137,7 +156,7 @@ export async function createPatientRecord(input: CreatePatientInput): Promise<{ 
         conditions: input.medicalHistory?.conditions ? [input.medicalHistory.conditions] : [],
         medications: input.medicalHistory?.medications || "None",
         surgeries: input.medicalHistory?.surgeries || "None",
-        smokingStatus: (input.medicalHistory?.smokingStatus as any) || "Non-smoker",
+        smokingStatus: asSmokingStatus(input.medicalHistory?.smokingStatus),
         additionalNotes: input.medicalHistory?.additionalNotes || "",
       },
       dentalHistory: {
@@ -179,7 +198,7 @@ export async function createPatientRecord(input: CreatePatientInput): Promise<{ 
         conditions: input.medicalHistory?.conditions ? [input.medicalHistory.conditions] : [],
         medications: input.medicalHistory?.medications || "None",
         surgeries: input.medicalHistory?.surgeries || "None",
-        smokingStatus: (input.medicalHistory?.smokingStatus as any) || "Non-smoker",
+        smokingStatus: asSmokingStatus(input.medicalHistory?.smokingStatus),
         additionalNotes: input.medicalHistory?.additionalNotes || "",
       },
       dentalHistory: {
@@ -496,12 +515,12 @@ export async function fetchDoctors(): Promise<Doctor[]> {
 
 export async function fetchAuditLogs(): Promise<AuditLogRecord[]> {
   try {
-    const data = await apiClient<any[]>("/audit/logs");
+    const data = await apiClient<AuditLogApiRow[]>("/audit/logs");
     if (Array.isArray(data) && data.length > 0) {
-      return data.map((d: any) => ({
+      return data.map((d) => ({
         id: d.id,
         user: d.actor_user_id ? "Operations Staff" : "System Admin",
-        role: (d.actor_role as "ADMIN" | "DOCTOR") || "ADMIN",
+        role: d.actor_role || "ADMIN",
         action: d.action,
         target: d.target_id || "System",
         time: new Date(d.occurred_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),

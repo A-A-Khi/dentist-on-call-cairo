@@ -16,17 +16,18 @@ export default function PatientsPage() {
   const searchParams = useSearchParams();
   const locale = (params?.locale as string) || "en";
   const dict = getDictionarySync(locale);
-  const initialQuery = searchParams?.get("q") || "";
+  const urlQuery = searchParams?.get("q") || "";
 
   const [patients, setPatients] = useState<Patient[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState(initialQuery);
+  const [searchQuery, setSearchQuery] = useState(urlQuery);
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [prevUrlQuery, setPrevUrlQuery] = useState(urlQuery);
 
-  useEffect(() => {
-    const q = searchParams?.get("q") || "";
-    setSearchQuery(q);
-  }, [searchParams]);
+  if (urlQuery !== prevUrlQuery) {
+    setPrevUrlQuery(urlQuery);
+    setSearchQuery(urlQuery);
+  }
 
   useEffect(() => {
     let isMounted = true;
