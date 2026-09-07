@@ -18,7 +18,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
     return (
       <div className="w-full space-y-1.5">
         {label && (
-          <label htmlFor={selectId} className="block text-xs font-medium text-[#94a3b8]">
+          <label htmlFor={selectId} className="block text-xs font-medium text-secondary">
             {label}
           </label>
         )}
@@ -26,18 +26,18 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
           <select
             id={selectId}
             ref={ref}
-            className={`glass-input w-full rounded-xl px-3.5 py-2.5 text-sm text-[#f8fafc] transition-all duration-150 focus:outline-none focus:ring-1 focus:ring-[#caa95a] disabled:opacity-50 appearance-none cursor-pointer ${
+            className={`glass-input w-full rounded-xl px-3.5 py-2.5 text-sm text-primary transition-all duration-150 focus:outline-none focus:ring-1 focus:ring-[#caa95a] disabled:opacity-50 appearance-none cursor-pointer ${
               error ? "border-rose-500/80" : ""
             } ${className}`}
             {...props}
           >
             {options.map((opt) => (
-              <option key={opt.value} value={opt.value} className="bg-[#101622] text-[#f8fafc]">
+              <option key={opt.value} value={opt.value} className="bg-white text-primary">
                 {opt.label}
               </option>
             ))}
           </select>
-          <div className="pointer-events-none absolute inset-y-0 end-0 flex items-center px-3 text-[#64748b]">
+          <div className="pointer-events-none absolute inset-y-0 end-0 flex items-center px-3 text-muted">
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
             </svg>

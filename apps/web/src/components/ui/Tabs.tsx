@@ -28,18 +28,18 @@ export function Tabs({ items, activeTab, onChange, className = "" }: TabsProps) 
             onClick={() => onChange(item.id)}
             className={`relative flex shrink-0 items-center gap-2 px-4 py-3 text-xs font-medium transition-all ${
               isActive
-                ? "text-[#caa95a] font-semibold"
-                : "text-[#94a3b8] hover:text-[#f8fafc]"
+                ? "text-gold font-semibold"
+                : "text-secondary hover:text-primary"
             }`}
           >
-            {item.icon && <span className={isActive ? "text-[#caa95a]" : "text-[#64748b]"}>{item.icon}</span>}
+            {item.icon && <span className={isActive ? "text-gold" : "text-muted"}>{item.icon}</span>}
             <span>{item.label}</span>
             {item.count !== undefined && (
               <span
                 className={`rounded-full px-1.5 py-0.2 text-[10px] ${
                   isActive
-                    ? "glass-active text-[#caa95a]"
-                    : "glass bg-white/5 text-[#94a3b8]"
+                    ? "glass-active text-gold"
+                    : "bg-slate-100 text-secondary"
                 }`}
               >
                 {item.count}

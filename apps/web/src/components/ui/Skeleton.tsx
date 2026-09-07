@@ -3,7 +3,7 @@ import React from "react";
 export function Skeleton({ className = "" }: { className?: string }) {
   return (
     <div
-      className={`animate-pulse rounded-xl bg-[#1c263b]/70 ${className}`}
+      className={`animate-pulse rounded-xl bg-slate-200/80 ${className}`}
     />
   );
 }

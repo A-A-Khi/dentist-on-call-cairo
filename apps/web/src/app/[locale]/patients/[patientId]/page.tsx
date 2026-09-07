@@ -3,9 +3,8 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { AppNavbar } from "../../../../components/layout/AppNavbar";
-import { AppSidebar } from "../../../../components/layout/AppSidebar";
-import { MobileNav } from "../../../../components/layout/MobileNav";
+import { AppShell } from "../../../../components/layout/AppShell";
+import { Breadcrumb } from "../../../../components/layout/Breadcrumb";
 import { Badge } from "../../../../components/ui/Badge";
 import { Tabs } from "../../../../components/ui/Tabs";
 import { Modal } from "../../../../components/ui/Modal";
@@ -77,44 +76,20 @@ export default function PatientProfilePage() {
   ];
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#080a0f] text-[#f8fafc]">
-      <AppNavbar
-        locale={locale}
-        userName="Operations Director"
-        userRole="ADMIN"
-        brandName={dict.brand.name}
-        brandTag={dict.brand.tagline}
-        logoutText={dict.nav.logout}
-        adminLabel={dict.roles.admin}
-        doctorLabel={dict.roles.doctor}
-      />
-
-      <div className="flex flex-1 overflow-hidden">
-        <div className="hidden md:flex">
-          <AppSidebar
-            locale={locale}
-            role="ADMIN"
-            dict={dict.nav}
-          />
-        </div>
-
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 pb-24 md:pb-8">
-          <div className="max-w-6xl mx-auto space-y-6">
-            {/* Breadcrumb */}
-            <div className="flex items-center gap-2 text-xs text-[#94a3b8]">
-              <Link href={`/${locale}/patients`} className="hover:text-[#caa95a] transition-colors">
-                Patients
-              </Link>
-              <span>/</span>
-              <span className="font-mono text-[#caa95a]">{patient.code}</span>
-            </div>
+    <AppShell locale={locale}>
+            <Breadcrumb
+              items={[
+                { label: dict.nav.patients, href: `/${locale}/patients` },
+                { label: patient.code },
+              ]}
+            />
 
             {/* Patient Header Banner */}
             <div className="glass-card rounded-2xl p-5 sm:p-6 shadow-xl shadow-black/40">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 {/* Identity */}
                 <div className="flex items-start gap-4">
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#dfbf70] via-[#caa95a] to-[#99782a] text-lg font-bold text-[#0a0d14] shadow-md shadow-[#caa95a]/20">
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#dfbf70] via-[#caa95a] to-[#99782a] text-lg font-bold text-on-gold shadow-md shadow-[#caa95a]/20">
                     {patient.fullName
                       .split(" ")
                       .map((n: string) => n[0])
@@ -124,10 +99,10 @@ export default function PatientProfilePage() {
 
                   <div className="space-y-1">
                     <div className="flex flex-wrap items-center gap-2.5">
-                      <h1 className="text-xl font-bold text-[#f8fafc] sm:text-2xl">
+                      <h1 className="text-xl font-bold text-primary sm:text-2xl">
                         {patient.fullName}
                       </h1>
-                      <span className="font-mono text-xs font-semibold text-[#caa95a] bg-[#caa95a]/10 px-2 py-0.5 rounded-lg border border-[#caa95a]/20">
+                      <span className="font-mono text-xs font-semibold text-gold bg-[#caa95a]/10 px-2 py-0.5 rounded-lg border border-[#caa95a]/20">
                         {patient.code}
                       </span>
                       <Badge
@@ -138,14 +113,14 @@ export default function PatientProfilePage() {
                       </Badge>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[#94a3b8]">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-secondary">
                       <span>{patient.age} {locale === "ar" ? "سنة" : "years old"} ({patient.dob})</span>
                       <span>•</span>
                       <span>{patient.gender}</span>
                       <span>•</span>
                       <span className="font-mono">{patient.phone}</span>
                       <span>•</span>
-                      <span>{dict.patients.table.assignedDoctor}: <strong className="text-[#f8fafc]">{patient.assignedDoctor}</strong></span>
+                      <span>{dict.patients.table.assignedDoctor}: <strong className="text-primary">{patient.assignedDoctor}</strong></span>
                     </div>
                   </div>
                 </div>
@@ -154,7 +129,7 @@ export default function PatientProfilePage() {
                 <div className="flex flex-wrap items-center gap-2.5 pt-2 md:pt-0">
                   <Link
                     href={`/${locale}/patients/${patient.code}/visit/new`}
-                    className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#dfbf70] via-[#caa95a] to-[#99782a] px-4 py-2.5 text-xs font-bold text-[#0a0d14] shadow-lg shadow-[#caa95a]/25 hover:opacity-95 transition-all"
+                    className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#dfbf70] via-[#caa95a] to-[#99782a] px-4 py-2.5 text-xs font-bold text-on-gold shadow-lg shadow-[#caa95a]/25 hover:opacity-95 transition-all"
                   >
                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
@@ -164,9 +139,9 @@ export default function PatientProfilePage() {
 
                   <Link
                     href={`/${locale}/calendar`}
-                    className="inline-flex items-center gap-1.5 glass rounded-xl px-3.5 py-2.5 text-xs font-medium text-[#f8fafc] hover:bg-[#1c263b] transition-colors"
+                    className="inline-flex items-center gap-1.5 glass rounded-xl px-3.5 py-2.5 text-xs font-medium text-primary hover:bg-slate-100 transition-colors"
                   >
-                    <svg className="h-4 w-4 text-[#94a3b8]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="h-4 w-4 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                     <span>{dict.patientProfile.scheduleAppointment}</span>
@@ -186,7 +161,7 @@ export default function PatientProfilePage() {
                   {patient.medicalAlerts.map((alert: string, idx: number) => (
                     <span
                       key={idx}
-                      className="rounded-lg border border-rose-500/40 bg-rose-950/40 px-2.5 py-1 text-xs font-semibold text-rose-300"
+                      className="rounded-lg border border-rose-500/40 bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700"
                     >
                       {alert}
                     </span>
@@ -205,37 +180,37 @@ export default function PatientProfilePage() {
                   {/* Next Appointment Card */}
                   <div className="glass-card rounded-2xl p-5 space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-[#caa95a] uppercase tracking-wider">
+                      <span className="text-xs font-semibold text-gold uppercase tracking-wider">
                         Next Appointment
                       </span>
                       <Badge variant="blue" size="sm">Confirmed</Badge>
                     </div>
                     {patient.nextAppointment ? (
                       <div>
-                        <p className="text-base font-bold text-[#f8fafc]">{patient.nextAppointment}</p>
-                        <p className="text-xs text-[#94a3b8] mt-0.5">
+                        <p className="text-base font-bold text-primary">{patient.nextAppointment}</p>
+                        <p className="text-xs text-secondary mt-0.5">
                           Root Canal Obturation (#16) with {patient.assignedDoctor}
                         </p>
-                        <p className="text-[11px] text-[#64748b] mt-1">Location: New Cairo Clinic — Room 1</p>
+                        <p className="text-[11px] text-muted mt-1">Location: New Cairo Clinic — Room 1</p>
                       </div>
                     ) : (
-                      <p className="text-xs text-[#94a3b8]">No upcoming appointment booked.</p>
+                      <p className="text-xs text-secondary">No upcoming appointment booked.</p>
                     )}
                   </div>
 
                   {/* Latest Visit Card */}
                   <div className="glass-card rounded-2xl p-5 space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-[#caa95a] uppercase tracking-wider">
+                      <span className="text-xs font-semibold text-gold uppercase tracking-wider">
                         Latest Visit
                       </span>
-                      <span className="text-xs text-[#94a3b8]">{patient.lastVisit}</span>
+                      <span className="text-xs text-secondary">{patient.lastVisit}</span>
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-[#f8fafc]">
+                      <p className="text-xs font-bold text-primary">
                         Symptomatic Apical Periodontitis secondary to Pulpal Necrosis (#16)
                       </p>
-                      <p className="text-xs text-[#94a3b8] mt-1 line-clamp-2">
+                      <p className="text-xs text-secondary mt-1 line-clamp-2">
                         Chemo-mechanical canal preparation done, 4 canals shaped, calcium hydroxide placed.
                       </p>
                     </div>
@@ -245,51 +220,51 @@ export default function PatientProfilePage() {
                 {/* Patient Summary Details & Emergency Contact */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="md:col-span-2 glass-card rounded-2xl p-5 space-y-3">
-                    <h3 className="text-sm font-semibold text-[#f8fafc]">Demographics & Contact Details</h3>
+                    <h3 className="text-sm font-semibold text-primary">Demographics & Contact Details</h3>
                     <div className="grid grid-cols-2 gap-3 text-xs">
                       <div>
-                        <span className="text-[#64748b] block">Home Address</span>
-                        <span className="text-[#f8fafc] font-medium">{patient.address}</span>
+                        <span className="text-muted block">Home Address</span>
+                        <span className="text-primary font-medium">{patient.address}</span>
                       </div>
                       <div>
-                        <span className="text-[#64748b] block">Email</span>
-                        <span className="text-[#f8fafc] font-medium">{patient.email}</span>
+                        <span className="text-muted block">Email</span>
+                        <span className="text-primary font-medium">{patient.email}</span>
                       </div>
                       <div>
-                        <span className="text-[#64748b] block">WhatsApp</span>
-                        <span className="text-[#f8fafc] font-medium font-mono">{patient.whatsappPhone}</span>
+                        <span className="text-muted block">WhatsApp</span>
+                        <span className="text-primary font-medium font-mono">{patient.whatsappPhone}</span>
                       </div>
                       <div>
-                        <span className="text-[#64748b] block">Smoking Status</span>
-                        <span className="text-[#f8fafc] font-medium">{patient.medicalHistory.smokingStatus}</span>
+                        <span className="text-muted block">Smoking Status</span>
+                        <span className="text-primary font-medium">{patient.medicalHistory.smokingStatus}</span>
                       </div>
                     </div>
                   </div>
 
                   <div className="glass-card rounded-2xl p-5 space-y-2">
-                    <h3 className="text-sm font-semibold text-[#f8fafc]">Emergency Contact</h3>
+                    <h3 className="text-sm font-semibold text-primary">Emergency Contact</h3>
                     <div className="text-xs space-y-1">
-                      <p className="font-medium text-[#f8fafc]">{patient.emergencyContact.name}</p>
-                      <p className="text-[#94a3b8]">{patient.emergencyContact.relationship}</p>
-                      <p className="font-mono text-[#caa95a]">{patient.emergencyContact.phone}</p>
+                      <p className="font-medium text-primary">{patient.emergencyContact.name}</p>
+                      <p className="text-secondary">{patient.emergencyContact.relationship}</p>
+                      <p className="font-mono text-gold">{patient.emergencyContact.phone}</p>
                     </div>
                   </div>
                 </div>
 
                 {/* Chronological Treatment Timeline */}
                 <div className="glass-card rounded-2xl p-5 sm:p-6 space-y-4">
-                  <h3 className="text-sm font-semibold text-[#f8fafc]">Clinical Timeline Events</h3>
+                  <h3 className="text-sm font-semibold text-primary">Clinical Timeline Events</h3>
 
-                  <div className="relative ps-6 space-y-6 before:absolute before:start-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-[#24314c]">
+                  <div className="relative ps-6 space-y-6 before:absolute before:start-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
                     {/* Event 1 */}
                     <div className="relative">
-                      <span className="absolute -start-6 top-1 h-3.5 w-3.5 rounded-full border-2 border-[#101622] bg-[#caa95a]" />
+                      <span className="absolute -start-6 top-1 h-3.5 w-3.5 rounded-full border-2 border-white bg-[#caa95a]" />
                       <div className="space-y-1">
                         <div className="flex items-center gap-2 text-xs">
-                          <span className="font-bold text-[#f8fafc]">Clinical Visit Executed</span>
-                          <span className="text-[#64748b]">•</span>
-                          <span className="text-[#94a3b8]">2026-09-01</span>
-                          <span className="text-[#64748b]">by {patient.assignedDoctor}</span>
+                          <span className="font-bold text-primary">Clinical Visit Executed</span>
+                          <span className="text-muted">•</span>
+                          <span className="text-secondary">2026-09-01</span>
+                          <span className="text-muted">by {patient.assignedDoctor}</span>
                         </div>
                         <p className="text-xs text-[#cbd5e1]">
                           Performed emergency chemo-mechanical instrumentation on tooth #16. Prescribed Clindamycin 300mg.
@@ -299,14 +274,14 @@ export default function PatientProfilePage() {
 
                     {/* Event 2 */}
                     <div className="relative">
-                      <span className="absolute -start-6 top-1 h-3.5 w-3.5 rounded-full border-2 border-[#101622] bg-blue-400" />
+                      <span className="absolute -start-6 top-1 h-3.5 w-3.5 rounded-full border-2 border-white bg-blue-400" />
                       <div className="space-y-1">
                         <div className="flex items-center gap-2 text-xs">
-                          <span className="font-bold text-[#f8fafc]">Periapical Digital X-Ray Uploaded</span>
-                          <span className="text-[#64748b]">•</span>
-                          <span className="text-[#94a3b8]">2026-09-01</span>
+                          <span className="font-bold text-primary">Periapical Digital X-Ray Uploaded</span>
+                          <span className="text-muted">•</span>
+                          <span className="text-secondary">2026-09-01</span>
                         </div>
-                        <p className="text-xs text-[#94a3b8]">
+                        <p className="text-xs text-secondary">
                           High-resolution digital sensor exposure captured periapical radiolucency at mesiobuccal root.
                         </p>
                       </div>
@@ -314,14 +289,14 @@ export default function PatientProfilePage() {
 
                     {/* Event 3 */}
                     <div className="relative">
-                      <span className="absolute -start-6 top-1 h-3.5 w-3.5 rounded-full border-2 border-[#101622] bg-emerald-400" />
+                      <span className="absolute -start-6 top-1 h-3.5 w-3.5 rounded-full border-2 border-white bg-emerald-400" />
                       <div className="space-y-1">
                         <div className="flex items-center gap-2 text-xs">
-                          <span className="font-bold text-[#f8fafc]">Patient File Created</span>
-                          <span className="text-[#64748b]">•</span>
-                          <span className="text-[#94a3b8]">2026-08-30</span>
+                          <span className="font-bold text-primary">Patient File Created</span>
+                          <span className="text-muted">•</span>
+                          <span className="text-secondary">2026-08-30</span>
                         </div>
-                        <p className="text-xs text-[#94a3b8]">
+                        <p className="text-xs text-secondary">
                           Registered through emergency triage. Medical alert flags recorded.
                         </p>
                       </div>
@@ -334,35 +309,35 @@ export default function PatientProfilePage() {
             {/* Tab 2: Medical History */}
             {activeTab === "medical" && (
               <div className="glass-card rounded-2xl p-5 sm:p-6 space-y-6">
-                <h3 className="text-sm font-semibold text-[#f8fafc]">Medical History & Systemic Conditions</h3>
+                <h3 className="text-sm font-semibold text-primary">Medical History & Systemic Conditions</h3>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                  <div className="rounded-xl border border-rose-500/30 bg-rose-950/20 p-4 space-y-1.5">
-                    <span className="font-bold text-rose-300 block">Drug & Material Allergies</span>
+                  <div className="rounded-xl border border-rose-500/30 bg-rose-50 p-4 space-y-1.5">
+                    <span className="font-bold text-rose-700 block">Drug & Material Allergies</span>
                     <p className="text-rose-100">{patient.medicalHistory.allergies}</p>
                   </div>
 
                   <div className="glass rounded-xl p-4 space-y-1.5">
-                    <span className="font-bold text-[#caa95a] block">Chronic Conditions</span>
-                    <p className="text-[#f8fafc]">
+                    <span className="font-bold text-gold block">Chronic Conditions</span>
+                    <p className="text-primary">
                       {patient.medicalHistory.conditions.join(", ") || "None reported"}
                     </p>
                   </div>
 
                   <div className="glass rounded-xl p-4 space-y-1.5">
-                    <span className="font-bold text-[#caa95a] block">Current Medications</span>
-                    <p className="text-[#f8fafc]">{patient.medicalHistory.medications}</p>
+                    <span className="font-bold text-gold block">Current Medications</span>
+                    <p className="text-primary">{patient.medicalHistory.medications}</p>
                   </div>
 
                   <div className="glass rounded-xl p-4 space-y-1.5">
-                    <span className="font-bold text-[#caa95a] block">Previous Surgeries</span>
-                    <p className="text-[#f8fafc]">{patient.medicalHistory.surgeries}</p>
+                    <span className="font-bold text-gold block">Previous Surgeries</span>
+                    <p className="text-primary">{patient.medicalHistory.surgeries}</p>
                   </div>
                 </div>
 
                 <div className="glass rounded-xl p-4 space-y-1.5 text-xs">
-                  <span className="font-bold text-[#94a3b8] block">Clinical Precautions & Notes</span>
-                  <p className="text-[#f8fafc]">{patient.medicalHistory.additionalNotes}</p>
+                  <span className="font-bold text-secondary block">Clinical Precautions & Notes</span>
+                  <p className="text-primary">{patient.medicalHistory.additionalNotes}</p>
                 </div>
               </div>
             )}
@@ -370,24 +345,24 @@ export default function PatientProfilePage() {
             {/* Tab 3: Dental History */}
             {activeTab === "dental" && (
               <div className="glass-card rounded-2xl p-5 sm:p-6 space-y-6">
-                <h3 className="text-sm font-semibold text-[#f8fafc]">Dental History & Previous Interventions</h3>
+                <h3 className="text-sm font-semibold text-primary">Dental History & Previous Interventions</h3>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                   <div className="glass rounded-xl p-4 space-y-1.5">
-                    <span className="font-bold text-[#caa95a] block">Previous Treatments</span>
-                    <p className="text-[#f8fafc]">{patient.dentalHistory.previousTreatment}</p>
+                    <span className="font-bold text-gold block">Previous Treatments</span>
+                    <p className="text-primary">{patient.dentalHistory.previousTreatment}</p>
                   </div>
                   <div className="glass rounded-xl p-4 space-y-1.5">
-                    <span className="font-bold text-[#caa95a] block">Extractions</span>
-                    <p className="text-[#f8fafc]">{patient.dentalHistory.extractions}</p>
+                    <span className="font-bold text-gold block">Extractions</span>
+                    <p className="text-primary">{patient.dentalHistory.extractions}</p>
                   </div>
                   <div className="glass rounded-xl p-4 space-y-1.5">
-                    <span className="font-bold text-[#caa95a] block">Root Canals</span>
-                    <p className="text-[#f8fafc]">{patient.dentalHistory.rootCanals}</p>
+                    <span className="font-bold text-gold block">Root Canals</span>
+                    <p className="text-primary">{patient.dentalHistory.rootCanals}</p>
                   </div>
                   <div className="glass rounded-xl p-4 space-y-1.5">
-                    <span className="font-bold text-[#caa95a] block">Periodontal / Gum Status</span>
-                    <p className="text-[#f8fafc]">{patient.dentalHistory.gumProblems}</p>
+                    <span className="font-bold text-gold block">Periodontal / Gum Status</span>
+                    <p className="text-primary">{patient.dentalHistory.gumProblems}</p>
                   </div>
                 </div>
               </div>
@@ -404,45 +379,45 @@ export default function PatientProfilePage() {
                     >
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b glass-divider/60 gap-2">
                         <div className="flex items-center gap-3">
-                          <span className="font-bold text-sm text-[#f8fafc]">{v.date}</span>
-                          <span className="text-xs text-[#94a3b8] font-mono">{v.time}</span>
+                          <span className="font-bold text-sm text-primary">{v.date}</span>
+                          <span className="text-xs text-secondary font-mono">{v.time}</span>
                           <Badge variant="green" size="sm">{v.status}</Badge>
                         </div>
-                        <span className="text-xs text-[#caa95a] font-medium">Doctor: {v.doctorName}</span>
+                        <span className="text-xs text-gold font-medium">Doctor: {v.doctorName}</span>
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                         <div>
-                          <span className="font-semibold text-[#94a3b8] block">Chief Complaint</span>
-                          <p className="text-[#f8fafc] mt-0.5">{v.chiefComplaint}</p>
+                          <span className="font-semibold text-secondary block">Chief Complaint</span>
+                          <p className="text-primary mt-0.5">{v.chiefComplaint}</p>
                         </div>
                         <div>
-                          <span className="font-semibold text-[#94a3b8] block">Diagnosis</span>
-                          <p className="text-[#f8fafc] mt-0.5">{v.diagnosis}</p>
+                          <span className="font-semibold text-secondary block">Diagnosis</span>
+                          <p className="text-primary mt-0.5">{v.diagnosis}</p>
                         </div>
                       </div>
 
                       {/* Procedures Performed */}
                       <div className="glass rounded-xl p-3.5 space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-semibold text-[#caa95a] block">
+                          <span className="text-xs font-semibold text-gold block">
                             {locale === "ar" ? "الإجراءات المنفذة والتسعير السريري" : "Procedures Completed & Clinical Fees"}
                           </span>
-                          <span className="font-mono text-xs font-bold text-[#caa95a]">
+                          <span className="font-mono text-xs font-bold text-gold">
                             {v.procedures.reduce((s: number, p: any) => s + (p.costEGP || 0), 0).toLocaleString()} {locale === "ar" ? "ج.م" : "EGP"}
                           </span>
                         </div>
-                        <div className="divide-y divide-[#24314c]/40 text-xs">
+                        <div className="divide-y divide-slate-200 text-xs">
                           {v.procedures.map((p: any) => (
                             <div key={p.id} className="py-2 flex items-center justify-between">
                               <div>
-                                <span className="font-semibold text-[#f8fafc]">{p.name}</span>
+                                <span className="font-semibold text-primary">{p.name}</span>
                                 {p.toothNumber && (
-                                  <span className="ms-2 font-mono text-[11px] text-[#caa95a] bg-[#caa95a]/10 px-1.5 py-0.5 rounded border border-[#caa95a]/20">
+                                  <span className="ms-2 font-mono text-[11px] text-gold bg-[#caa95a]/10 px-1.5 py-0.5 rounded border border-[#caa95a]/20">
                                     Tooth {p.toothNumber}
                                   </span>
                                 )}
-                                {p.notes && <p className="text-[11px] text-[#94a3b8] mt-0.5">{p.notes}</p>}
+                                {p.notes && <p className="text-[11px] text-secondary mt-0.5">{p.notes}</p>}
                               </div>
                               <span className="font-mono font-bold text-emerald-400 shrink-0 ms-4">
                                 {p.costEGP.toLocaleString()} {locale === "ar" ? "ج.م" : "EGP"}
@@ -457,11 +432,11 @@ export default function PatientProfilePage() {
                             <Badge variant="green" size="sm">
                               ✓ {locale === "ar" ? "مقيد في الدفتر المالي العام" : "POSTED TO FINANCIAL LEDGER"}
                             </Badge>
-                            <span className="text-[#64748b] text-[11px]">
+                            <span className="text-muted text-[11px]">
                               {v.procedures.length} {locale === "ar" ? "إجراءات معتمدة" : "procedures billed"}
                             </span>
                           </div>
-                          <div className="text-end font-mono text-xs text-[#94a3b8]">
+                          <div className="text-end font-mono text-xs text-secondary">
                             {locale === "ar" ? "إيراد عيادة مؤكد" : "Settled Clinical Revenue"}
                           </div>
                         </div>
@@ -469,7 +444,7 @@ export default function PatientProfilePage() {
 
                       {/* Doctor Progress Notes & Rx */}
                       <div className="text-xs space-y-1">
-                        <span className="font-semibold text-[#94a3b8] block">Clinical Notes</span>
+                        <span className="font-semibold text-secondary block">Clinical Notes</span>
                         <p className="text-[#cbd5e1]">{v.doctorNotes}</p>
                       </div>
 
@@ -487,14 +462,14 @@ export default function PatientProfilePage() {
                   ))
                 ) : (
                   <div className="glass-card rounded-2xl border-dashed p-12 text-center">
-                    <p className="text-sm font-semibold text-[#f8fafc]">No clinical visits recorded yet</p>
-                    <p className="text-xs text-[#94a3b8] mt-1 max-w-sm mx-auto">
+                    <p className="text-sm font-semibold text-primary">No clinical visits recorded yet</p>
+                    <p className="text-xs text-secondary mt-1 max-w-sm mx-auto">
                       Use the visit recorder to document findings, odontogram tooth numbers, and completed procedures.
                     </p>
                     <div className="mt-4">
                       <Link
                         href={`/${locale}/patients/${patient.code}/visit/new`}
-                        className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#dfbf70] via-[#caa95a] to-[#99782a] px-4 py-2 text-xs font-semibold text-[#0a0d14]"
+                        className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#dfbf70] via-[#caa95a] to-[#99782a] px-4 py-2 text-xs font-semibold text-on-gold"
                       >
                         + Record First Visit
                       </Link>
@@ -508,28 +483,24 @@ export default function PatientProfilePage() {
             {activeTab === "attachments" && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-[#f8fafc]">Radiographs & Clinical Photos</h3>
+                  <h3 className="text-sm font-semibold text-primary">Radiographs & Clinical Photos</h3>
                   <button
                     type="button"
-                    className="rounded-xl border border-[#caa95a]/40 bg-[#caa95a]/15 px-3 py-1.5 text-xs font-semibold text-[#caa95a] hover:bg-[#caa95a]/25 transition-colors"
+                    className="rounded-xl border border-[#caa95a]/40 bg-[#caa95a]/15 px-3 py-1.5 text-xs font-semibold text-gold hover:bg-[#caa95a]/25 transition-colors"
                   >
                     + Upload New Attachment
                   </button>
                 </div>
 
                 <div className="glass-card rounded-2xl border-dashed p-12 text-center">
-                  <p className="text-sm font-semibold text-[#f8fafc]">No radiographs or clinical photos uploaded</p>
-                  <p className="text-xs text-[#94a3b8] mt-1">
+                  <p className="text-sm font-semibold text-primary">No radiographs or clinical photos uploaded</p>
+                  <p className="text-xs text-secondary mt-1">
                     Upload intraoral camera images, periapical X-rays, or panoramic radiographs.
                   </p>
                 </div>
               </div>
             )}
-          </div>
-        </main>
-      </div>
 
-      {/* Lightbox Media Viewer Modal */}
       <Modal
         isOpen={!!selectedMedia}
         onClose={() => setSelectedMedia(null)}
@@ -537,28 +508,26 @@ export default function PatientProfilePage() {
         size="lg"
       >
         <div className="glass aspect-video w-full rounded-xl flex flex-col items-center justify-center p-6 text-center space-y-3">
-          <svg className="h-16 w-16 text-[#caa95a]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="h-16 w-16 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
           <div>
-            <p className="text-sm font-semibold text-[#f8fafc]">{selectedMedia}</p>
-            <p className="text-xs text-[#94a3b8] mt-1">High-resolution sensor format (2048 x 1536 px) • DICOM encrypted</p>
+            <p className="text-sm font-semibold text-primary">{selectedMedia}</p>
+            <p className="text-xs text-secondary mt-1">High-resolution sensor format (2048 x 1536 px) • DICOM encrypted</p>
           </div>
           <div className="flex items-center gap-2 pt-2">
-            <button className="rounded-lg glass px-3 py-1 text-xs text-[#f8fafc]">
+            <button className="rounded-lg glass px-3 py-1 text-xs text-primary">
               Zoom In
             </button>
-            <button className="rounded-lg glass px-3 py-1 text-xs text-[#f8fafc]">
+            <button className="rounded-lg glass px-3 py-1 text-xs text-primary">
               Rotate 90°
             </button>
-            <button className="rounded-lg border border-[#caa95a]/40 bg-[#caa95a]/20 px-3 py-1 text-xs text-[#caa95a]">
+            <button className="rounded-lg border border-[#caa95a]/40 bg-[#caa95a]/20 px-3 py-1 text-xs text-gold">
               Download
             </button>
           </div>
         </div>
       </Modal>
-
-      <MobileNav locale={locale} role="ADMIN" />
-    </div>
+    </AppShell>
   );
 }

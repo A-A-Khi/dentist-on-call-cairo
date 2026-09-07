@@ -20,7 +20,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     ref
   ) => {
     const baseStyles =
-      "relative inline-flex items-center justify-center font-medium rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#0a0d14] disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]";
+      "relative inline-flex items-center justify-center font-medium rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[var(--bg-main)] disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]";
 
     const sizeStyles = {
       sm: "text-xs px-3 py-1.5 gap-1.5",
@@ -30,15 +30,15 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 
     const variantStyles = {
       primary:
-        "bg-gradient-to-r from-[#caa95a] via-[#dfbf70] to-[#caa95a] text-[#0a0d14] font-semibold hover:brightness-110 shadow-md shadow-[#caa95a]/15 focus:ring-[#caa95a]",
+        "bg-gradient-to-r from-[#dfbf70] via-[#caa95a] to-[#a8842d] text-on-gold font-semibold hover:brightness-105 shadow-md shadow-[#caa95a]/20 focus:ring-[#caa95a]",
       secondary:
-        "glass text-[#f8fafc] hover:bg-white/10 focus:ring-[#caa95a]",
+        "glass text-primary hover:bg-white focus:ring-[#caa95a]",
       outline:
-        "glass bg-transparent border-[#caa95a]/40 text-[#caa95a] hover:bg-[#caa95a]/10 focus:ring-[#caa95a]",
+        "glass bg-transparent border-[#caa95a]/40 text-gold hover:bg-[#caa95a]/10 focus:ring-[#caa95a]",
       danger:
-        "bg-rose-600/90 hover:bg-rose-600 text-white shadow-md shadow-rose-900/30 focus:ring-rose-500",
+        "bg-rose-600 hover:bg-rose-700 text-primary shadow-md shadow-rose-200 focus:ring-rose-500",
       ghost:
-        "bg-transparent hover:bg-white/5 text-[#94a3b8] hover:text-[#f8fafc] focus:ring-white/20",
+        "bg-transparent hover:bg-slate-100 text-secondary hover:text-primary focus:ring-slate-300",
     };
 
     return (

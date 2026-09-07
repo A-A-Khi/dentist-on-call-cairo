@@ -55,9 +55,9 @@ export function DoctorLiveQueue({ locale }: DoctorLiveQueueProps) {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {doctorStats.map((stat, idx) => (
           <Card key={idx} variant="elevated" className="p-5">
-            <p className="text-xs font-medium text-[#94a3b8]">{stat.label}</p>
-            <div className="mt-2 text-2xl font-bold text-[#f8fafc]">{stat.value}</div>
-            <p className="mt-1 text-[11px] text-[#caa95a]">{stat.highlight}</p>
+            <p className="text-xs font-medium text-secondary">{stat.label}</p>
+            <div className="mt-2 text-2xl font-bold text-primary">{stat.value}</div>
+            <p className="mt-1 text-[11px] text-gold">{stat.highlight}</p>
           </Card>
         ))}
       </div>
@@ -69,7 +69,7 @@ export function DoctorLiveQueue({ locale }: DoctorLiveQueueProps) {
             <CardTitle>
               {isAr ? "طابور المرضى الإكلينيكي لليوم" : "Today's Clinical Patient Queue"}
             </CardTitle>
-            <p className="text-xs text-[#64748b] mt-0.5">
+            <p className="text-xs text-muted mt-0.5">
               {isAr
                 ? "وصول طبي مصرح مع التنبيهات السريرية وتسجيل الزيارات الفوري"
                 : "Care-scoped patient access with medical alerts and visit launcher"}
@@ -86,13 +86,13 @@ export function DoctorLiveQueue({ locale }: DoctorLiveQueueProps) {
               >
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#caa95a]/10 text-xs font-bold text-[#caa95a] border border-[#caa95a]/20">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#caa95a]/10 text-xs font-bold text-gold border border-[#caa95a]/20">
                       {apt.time.split(" ")[0]}
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-[#f8fafc]">{apt.patientName}</span>
-                        <span className="text-xs text-[#64748b]">({apt.patientCode})</span>
+                        <span className="text-sm font-semibold text-primary">{apt.patientName}</span>
+                        <span className="text-xs text-muted">({apt.patientCode})</span>
                         <Badge
                           variant={
                             apt.status.toUpperCase() === "COMPLETED"
@@ -106,10 +106,10 @@ export function DoctorLiveQueue({ locale }: DoctorLiveQueueProps) {
                           {apt.status}
                         </Badge>
                       </div>
-                      <p className="text-xs text-[#caa95a] font-medium mt-1">
-                        {isAr ? "الإجراء الطبي" : "Procedure"}: <span className="text-[#f8fafc]">{apt.procedure}</span>
+                      <p className="text-xs text-gold font-medium mt-1">
+                        {isAr ? "الإجراء الطبي" : "Procedure"}: <span className="text-primary">{apt.procedure}</span>
                       </p>
-                      <p className="text-xs text-[#64748b] mt-0.5">
+                      <p className="text-xs text-muted mt-0.5">
                         {isAr ? "الموقع" : "Location"}: {apt.location}
                       </p>
                     </div>
@@ -131,7 +131,7 @@ export function DoctorLiveQueue({ locale }: DoctorLiveQueueProps) {
               </div>
             ))
           ) : (
-            <div className="py-12 text-center text-xs text-[#64748b]">
+            <div className="py-12 text-center text-xs text-muted">
               {isAr ? "لا يوجد مرضى معينون في طابورك لليوم." : "No patients assigned to your queue today."}
             </div>
           )}

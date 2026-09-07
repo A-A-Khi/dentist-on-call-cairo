@@ -18,17 +18,22 @@ export function MobileNav({ locale, role = "ADMIN" }: MobileNavProps) {
     pathname === href || pathname.startsWith(`${href}/`);
 
   const dashboardHref = `/${locale}/dashboard/${role === "ADMIN" ? "admin" : "doctor"}`;
+  const onScheduleSurface =
+    isCurrent(`/${locale}/calendar`) || isCurrent(`/${locale}/reservations`);
+  const fabHref = onScheduleSurface ? `/${locale}/calendar` : `/${locale}/patients/new`;
+  const fabTitle = onScheduleSurface
+    ? dict.calendar.bookAppointment
+    : dict.patients.addPatient;
 
   return (
     <nav className="glass-nav fixed bottom-0 inset-x-0 z-40 md:hidden border-t px-2 py-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
       <div className="flex items-center justify-around">
-        {/* Dashboard */}
         <Link
           href={dashboardHref}
           className={`flex flex-col items-center gap-1 p-1 min-w-[56px] min-h-[44px] justify-center text-[10px] font-medium transition-colors ${
             isCurrent(dashboardHref)
-              ? "text-[#caa95a] font-semibold"
-              : "text-[#94a3b8] hover:text-[#f8fafc]"
+              ? "text-gold font-semibold"
+              : "text-secondary hover:text-primary"
           }`}
         >
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -37,13 +42,12 @@ export function MobileNav({ locale, role = "ADMIN" }: MobileNavProps) {
           <span className="truncate max-w-[56px] text-center">{dict.nav.dashboard}</span>
         </Link>
 
-        {/* Patients */}
         <Link
           href={`/${locale}/patients`}
           className={`flex flex-col items-center gap-1 p-1 min-w-[56px] min-h-[44px] justify-center text-[10px] font-medium transition-colors ${
             isCurrent(`/${locale}/patients`)
-              ? "text-[#caa95a] font-semibold"
-              : "text-[#94a3b8] hover:text-[#f8fafc]"
+              ? "text-gold font-semibold"
+              : "text-secondary hover:text-primary"
           }`}
         >
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -52,24 +56,23 @@ export function MobileNav({ locale, role = "ADMIN" }: MobileNavProps) {
           <span className="truncate max-w-[56px] text-center">{dict.nav.patients}</span>
         </Link>
 
-        {/* Floating Action: + New Patient / Visit */}
         <Link
-          href={`/${locale}/patients/new`}
-          className="-mt-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-[#caa95a] to-[#dfbf70] text-[#0a0d14] shadow-lg shadow-[#caa95a]/30 active:scale-95 transition-transform shrink-0"
-          title={dict.patients.addPatient}
+          href={fabHref}
+          className="-mt-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-[#caa95a] to-[#dfbf70] text-on-gold shadow-lg shadow-[#caa95a]/30 active:scale-95 transition-transform shrink-0"
+          title={fabTitle}
+          aria-label={fabTitle}
         >
           <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
           </svg>
         </Link>
 
-        {/* Calendar */}
         <Link
           href={`/${locale}/calendar`}
           className={`flex flex-col items-center gap-1 p-1 min-w-[56px] min-h-[44px] justify-center text-[10px] font-medium transition-colors ${
             isCurrent(`/${locale}/calendar`)
-              ? "text-[#caa95a] font-semibold"
-              : "text-[#94a3b8] hover:text-[#f8fafc]"
+              ? "text-gold font-semibold"
+              : "text-secondary hover:text-primary"
           }`}
         >
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -78,13 +81,12 @@ export function MobileNav({ locale, role = "ADMIN" }: MobileNavProps) {
           <span className="truncate max-w-[56px] text-center">{dict.nav.calendar}</span>
         </Link>
 
-        {/* Reservations */}
         <Link
           href={`/${locale}/reservations`}
           className={`flex flex-col items-center gap-1 p-1 min-w-[56px] min-h-[44px] justify-center text-[10px] font-medium transition-colors ${
             isCurrent(`/${locale}/reservations`)
-              ? "text-[#caa95a] font-semibold"
-              : "text-[#94a3b8] hover:text-[#f8fafc]"
+              ? "text-gold font-semibold"
+              : "text-secondary hover:text-primary"
           }`}
         >
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -95,7 +95,7 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="relative flex min-h-screen flex-col items-center justify-center p-4 selection:bg-[#caa95a] selection:text-[#0a0d14]">
+    <main className="relative flex min-h-screen flex-col items-center justify-center p-4 selection:bg-[#caa95a] selection:text-[#1a1408]">
       <GlassBackground />
 
       {/* Top right language switcher */}
@@ -106,7 +106,7 @@ export default function LoginPage() {
       <div className="relative z-10 w-full max-w-md space-y-6">
         {/* Brand header */}
         <div className="text-center space-y-2">
-          <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#dfbf70] via-[#caa95a] to-[#99782a] text-[#0a0d14] shadow-lg shadow-[#caa95a]/25">
+          <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#dfbf70] via-[#caa95a] to-[#99782a] text-on-gold shadow-lg shadow-[#caa95a]/25">
             <svg
               className="h-6 w-6"
               viewBox="0 0 24 24"
@@ -120,15 +120,15 @@ export default function LoginPage() {
               <path d="M9 8h6" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">{t.brandName}</h1>
-          <p className="text-xs text-[#94a3b8]">{t.brandTag}</p>
+          <h1 className="text-2xl font-bold tracking-tight text-primary">{t.brandName}</h1>
+          <p className="text-xs text-secondary">{t.brandTag}</p>
         </div>
 
         {/* Login Card */}
         <Card variant="gold-bordered" className="p-8">
           <div className="mb-6 space-y-1">
-            <h2 className="text-lg font-semibold text-[#f8fafc]">{t.title}</h2>
-            <p className="text-xs text-[#64748b]">{t.subtitle}</p>
+            <h2 className="text-lg font-semibold text-primary">{t.title}</h2>
+            <p className="text-xs text-muted">{t.subtitle}</p>
           </div>
 
           {errorMessage && (
@@ -161,19 +161,19 @@ export default function LoginPage() {
             />
 
             <div className="flex items-center justify-between text-xs pt-1">
-              <label className="flex items-center gap-2 cursor-pointer text-[#94a3b8] hover:text-[#f8fafc]">
+              <label className="flex items-center gap-2 cursor-pointer text-secondary hover:text-primary">
                 <input
                   type="checkbox"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
-                  className="rounded border-white/10 glass-input text-[#caa95a] focus:ring-[#caa95a]"
+                  className="rounded border-slate-200 glass-input text-gold focus:ring-[#caa95a]"
                 />
                 <span>{t.rememberMe}</span>
               </label>
 
               <Link
                 href={`/${locale}/forgot-password`}
-                className="text-[#caa95a] hover:text-[#dfbf70] transition-colors"
+                className="text-gold hover:text-gold-hover transition-colors"
               >
                 {t.forgotPassword}
               </Link>
@@ -192,12 +192,12 @@ export default function LoginPage() {
 
           {/* Quick Demo Credentials */}
           <div className="mt-6 pt-5 border-t glass-divider space-y-2">
-            <p className="text-[11px] text-[#64748b] text-center">Development quick credentials:</p>
+            <p className="text-[11px] text-muted text-center">Development quick credentials:</p>
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
                 onClick={handleFillAdmin}
-                className="rounded-lg glass px-2.5 py-1.5 text-[11px] font-medium text-[#caa95a] hover:bg-[#caa95a]/10 hover:border-[#caa95a]/30 transition-all"
+                className="rounded-lg glass px-2.5 py-1.5 text-[11px] font-medium text-gold hover:bg-[#caa95a]/10 hover:border-[#caa95a]/30 transition-all"
               >
                 {t.demoAdmin}
               </button>
@@ -213,7 +213,7 @@ export default function LoginPage() {
         </Card>
 
         {/* Security Notice */}
-        <p className="text-center text-[11px] leading-relaxed text-[#64748b] px-4">
+        <p className="text-center text-[11px] leading-relaxed text-muted px-4">
           {t.securityNotice}
         </p>
       </div>

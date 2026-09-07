@@ -4,6 +4,8 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { AppShell } from "../../../../components/layout/AppShell";
+import { PageHeader } from "../../../../components/layout/PageHeader";
+import { Breadcrumb } from "../../../../components/layout/Breadcrumb";
 import { Input } from "../../../../components/ui/Input";
 import { Textarea } from "../../../../components/ui/Textarea";
 import { Button } from "../../../../components/ui/Button";
@@ -72,42 +74,37 @@ export default function NewPatientPage() {
   };
 
   return (
-    <AppShell locale={locale} role="ADMIN">
+    <AppShell locale={locale}>
       <div className="max-w-4xl mx-auto space-y-6">
-        {/* Page Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-2 text-xs text-[#94a3b8] mb-1">
-              <Link href={`/${locale}/patients`} className="hover:text-[#caa95a] transition-colors">
-                {dict.nav.patients}
-              </Link>
-              <span>/</span>
-              <span className="text-[#caa95a]">{dict.patientNew.title}</span>
-            </div>
-            <h1 className="text-xl font-bold tracking-tight text-[#f8fafc] sm:text-2xl">
-              {dict.patientNew.title}
-            </h1>
-            <p className="mt-0.5 text-xs text-[#94a3b8]">
-              {dict.patientNew.subtitle}
-            </p>
-          </div>
-
-          <Link
-            href={`/${locale}/patients`}
-            className="glass rounded-xl px-3.5 py-2 text-xs font-medium text-[#94a3b8] hover:text-[#f8fafc] transition-colors"
-          >
-            {dict.patientNew.cancelButton}
-          </Link>
-        </div>
+        <PageHeader
+          breadcrumb={
+            <Breadcrumb
+              items={[
+                { label: dict.nav.patients, href: `/${locale}/patients` },
+                { label: dict.patientNew.title },
+              ]}
+            />
+          }
+          title={dict.patientNew.title}
+          subtitle={dict.patientNew.subtitle}
+          actions={
+            <Link
+              href={`/${locale}/patients`}
+              className="glass rounded-xl px-3.5 py-2 text-xs font-medium text-secondary hover:text-primary transition-colors"
+            >
+              {dict.patientNew.cancelButton}
+            </Link>
+          }
+        />
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Section 1: Demographics */}
           <div className="glass-card rounded-2xl p-5 sm:p-6 space-y-4">
             <div className="flex items-center gap-2 pb-3 border-b glass-divider/60">
-              <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-[#caa95a]/20 text-xs font-bold text-[#caa95a]">
+              <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-[#caa95a]/20 text-xs font-bold text-gold">
                 1
               </div>
-              <h2 className="text-sm font-semibold text-[#f8fafc]">
+              <h2 className="text-sm font-semibold text-primary">
                 {dict.patientNew.step1Title}
               </h2>
             </div>
@@ -128,12 +125,12 @@ export default function NewPatientPage() {
                   required
                 />
                 <div>
-                  <label className="block text-xs font-medium text-[#94a3b8] mb-1">
+                  <label className="block text-xs font-medium text-secondary mb-1">
                     {dict.patientNew.gender}
                   </label>
                   <select
                     name="gender"
-                    className="w-full glass rounded-xl px-3.5 py-2 text-xs text-[#f8fafc] focus:border-[#caa95a] focus:outline-none"
+                    className="w-full glass rounded-xl px-3.5 py-2 text-xs text-primary focus:border-[#caa95a] focus:outline-none"
                   >
                     <option value="Male">{locale === "ar" ? "ذكر" : "Male"}</option>
                     <option value="Female">{locale === "ar" ? "أنثى" : "Female"}</option>
@@ -177,7 +174,7 @@ export default function NewPatientPage() {
               <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-amber-500/20 text-xs font-bold text-amber-400">
                 2
               </div>
-              <h2 className="text-sm font-semibold text-[#f8fafc]">
+              <h2 className="text-sm font-semibold text-primary">
                 {dict.patientNew.step2Title}
               </h2>
             </div>
@@ -185,14 +182,14 @@ export default function NewPatientPage() {
             <div className="space-y-4">
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-medium text-[#94a3b8]">
+                  <label className="text-xs font-medium text-secondary">
                     {dict.patientNew.allergiesLabel}
                   </label>
                   <button
                     type="button"
                     onClick={() => setHasAllergies(!hasAllergies)}
                     className={`text-xs font-semibold transition-colors ${
-                      hasAllergies ? "text-rose-400" : "text-[#64748b] hover:text-[#94a3b8]"
+                      hasAllergies ? "text-rose-400" : "text-muted hover:text-secondary"
                     }`}
                   >
                     {hasAllergies
@@ -207,7 +204,7 @@ export default function NewPatientPage() {
                     required
                   />
                 ) : (
-                  <div className="glass rounded-xl/50 px-3.5 py-2 text-xs text-[#64748b]">
+                  <div className="glass rounded-xl/50 px-3.5 py-2 text-xs text-muted">
                     {locale === "ar" ? "لا توجد حساسية دوائية أو غذائية مسجلة" : "No known allergies reported"}
                   </div>
                 )}
@@ -215,14 +212,14 @@ export default function NewPatientPage() {
 
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-medium text-[#94a3b8]">
+                  <label className="text-xs font-medium text-secondary">
                     {dict.patientNew.conditionsLabel}
                   </label>
                   <button
                     type="button"
                     onClick={() => setHasSystemicConditions(!hasSystemicConditions)}
                     className={`text-xs font-semibold transition-colors ${
-                      hasSystemicConditions ? "text-amber-400" : "text-[#64748b] hover:text-[#94a3b8]"
+                      hasSystemicConditions ? "text-amber-400" : "text-muted hover:text-secondary"
                     }`}
                   >
                     {hasSystemicConditions
@@ -237,7 +234,7 @@ export default function NewPatientPage() {
                     required
                   />
                 ) : (
-                  <div className="glass rounded-xl/50 px-3.5 py-2 text-xs text-[#64748b]">
+                  <div className="glass rounded-xl/50 px-3.5 py-2 text-xs text-muted">
                     {locale === "ar" ? "لا توجد أمراض مزمنة مسجلة" : "No systemic chronic conditions"}
                   </div>
                 )}
@@ -251,12 +248,12 @@ export default function NewPatientPage() {
                 />
 
                 <div>
-                  <label className="block text-xs font-medium text-[#94a3b8] mb-1">
+                  <label className="block text-xs font-medium text-secondary mb-1">
                     {dict.patientNew.smokingLabel}
                   </label>
                   <select
                     name="smokingStatus"
-                    className="w-full glass rounded-xl px-3.5 py-2 text-xs text-[#f8fafc] focus:border-[#caa95a] focus:outline-none"
+                    className="w-full glass rounded-xl px-3.5 py-2 text-xs text-primary focus:border-[#caa95a] focus:outline-none"
                   >
                     <option value="Non-smoker">{locale === "ar" ? "غير مدخن" : "Non-smoker"}</option>
                     <option value="Smoker">{locale === "ar" ? "مدخن" : "Smoker"}</option>
@@ -273,7 +270,7 @@ export default function NewPatientPage() {
               <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-500/20 text-xs font-bold text-emerald-400">
                 3
               </div>
-              <h2 className="text-sm font-semibold text-[#f8fafc]">
+              <h2 className="text-sm font-semibold text-primary">
                 {dict.patientNew.step3Title}
               </h2>
             </div>
@@ -309,7 +306,7 @@ export default function NewPatientPage() {
           <div className="flex items-center justify-end gap-3 pt-2">
             <Link
               href={`/${locale}/patients`}
-              className="glass rounded-xl px-5 py-2.5 text-xs font-semibold text-[#94a3b8] hover:text-[#f8fafc] transition-colors"
+              className="glass rounded-xl px-5 py-2.5 text-xs font-semibold text-secondary hover:text-primary transition-colors"
             >
               {dict.patientNew.cancelButton}
             </Link>

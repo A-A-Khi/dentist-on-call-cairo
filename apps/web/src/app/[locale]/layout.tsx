@@ -24,8 +24,8 @@ export default async function LocaleLayout({
   const dir = getDirection(locale);
 
   return (
-    <html lang={locale} dir={dir} className="dark">
-      <body className="min-h-screen antialiased selection:bg-[#caa95a] selection:text-[#0a0d14]">
+    <html lang={locale} dir={dir}>
+      <body className="min-h-screen antialiased text-primary selection:bg-[#caa95a] selection:text-[#1a1408]">
         <LocaleDirSync locale={locale} dir={dir} />
         {children}
       </body>

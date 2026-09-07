@@ -46,7 +46,7 @@ export function Modal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/75 backdrop-blur-sm transition-opacity"
+        className="fixed inset-0 bg-slate-900/30 backdrop-blur-sm transition-opacity"
         onClick={onClose}
       />
 
@@ -56,13 +56,13 @@ export function Modal({
       >
         <div className="flex items-start justify-between pb-4 border-b glass-divider">
           <div>
-            {title && <h3 className="text-lg font-semibold text-[#f8fafc]">{title}</h3>}
-            {description && <p className="text-xs text-[#94a3b8] mt-0.5">{description}</p>}
+            {title && <h3 className="text-lg font-semibold text-primary">{title}</h3>}
+            {description && <p className="text-xs text-secondary mt-0.5">{description}</p>}
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-1.5 text-[#64748b] glass-hover hover:text-[#f8fafc] transition-colors"
+            className="rounded-lg p-1.5 text-muted glass-hover hover:text-primary transition-colors"
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />

@@ -108,7 +108,11 @@
       "viewChart": "Open Chart",
       "recordVisit": "Record Visit"
     },
-    "empty": "No patients found matching your search criteria."
+    "empty": "No patients found matching your search criteria.",
+    "emptyTitle": "No patients registered yet",
+    "emptyDescription": "Create the first patient file with clinical alerts and emergency contacts.",
+    "emptySearchTitle": "No matching patients",
+    "emptySearchDescription": "Try another DOC-ID, name, or phone number — or clear filters."
   },
   "patientNew": {
     "title": "Register New Patient",
@@ -182,9 +186,11 @@
   },
   "calendar": {
     "title": "Clinical Appointments Calendar",
-    "subtitle": "Schedule, track, and manage specialist chair-time across clinic suites",
+    "subtitle": "Book chair-time on the daily schedule. Use Reservations to confirm or update booking status.",
     "bookAppointment": "+ Schedule Appointment",
     "filterDoctor": "Specialist",
+    "emptyTitle": "No appointments on this view",
+    "emptyDescription": "Schedule the next patient visit to populate today's chair-time.",
     "views": {
       "month": "Month",
       "week": "Week",
@@ -194,9 +200,11 @@
   },
   "reservations": {
     "title": "Reservations Management",
-    "subtitle": "Confirmed and pending patient bookings with real-time status transitions",
+    "subtitle": "Confirm, complete, or follow up on patient bookings. Open Calendar to schedule new appointments.",
     "filterStatus": "Status Filter",
     "filterDoctor": "Doctor Filter",
+    "emptyTitle": "No reservations yet",
+    "emptyDescription": "Book an appointment from the calendar, then manage its status here.",
     "actions": {
       "confirm": "Confirm",
       "reschedule": "Reschedule",

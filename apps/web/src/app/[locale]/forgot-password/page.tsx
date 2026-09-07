@@ -62,7 +62,7 @@ export default function ForgotPasswordPage() {
 
       <div className="relative z-10 w-full max-w-md space-y-6">
         <div className="text-center space-y-2">
-          <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#dfbf70] via-[#caa95a] to-[#99782a] text-[#0a0d14] shadow-lg shadow-[#caa95a]/25">
+          <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#dfbf70] via-[#caa95a] to-[#99782a] text-on-gold shadow-lg shadow-[#caa95a]/25">
             <svg
               className="h-6 w-6"
               viewBox="0 0 24 24"
@@ -76,13 +76,13 @@ export default function ForgotPasswordPage() {
               <path d="M9 8h6" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">{t.brandName}</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-primary">{t.brandName}</h1>
         </div>
 
         <Card variant="gold-bordered" className="p-8 backdrop-blur-xl">
           <div className="mb-6 space-y-1">
-            <h2 className="text-lg font-semibold text-[#f8fafc]">{t.title}</h2>
-            <p className="text-xs text-[#64748b]">{t.subtitle}</p>
+            <h2 className="text-lg font-semibold text-primary">{t.title}</h2>
+            <p className="text-xs text-muted">{t.subtitle}</p>
           </div>
 
           {isSuccess ? (
@@ -119,7 +119,7 @@ export default function ForgotPasswordPage() {
               <div className="pt-2 text-center">
                 <Link
                   href={`/${locale}/login`}
-                  className="text-xs text-[#94a3b8] hover:text-[#f8fafc] transition-colors"
+                  className="text-xs text-secondary hover:text-primary transition-colors"
                 >
                   ← {t.backToLogin}
                 </Link>

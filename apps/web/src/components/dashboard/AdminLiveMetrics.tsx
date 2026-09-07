@@ -45,7 +45,7 @@ export function AdminLiveMetrics({ locale, dict }: AdminLiveMetricsProps) {
         ? (isAr ? `${patients.length} ملف مسجل` : `${patients.length} registered file(s)`)
         : (isAr ? "لا يوجد مرضى مسجلون حالياً" : "No patients registered yet"),
       icon: (
-        <svg className="h-5 w-5 text-[#caa95a]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="h-5 w-5 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
         </svg>
       ),
@@ -93,14 +93,14 @@ export function AdminLiveMetrics({ locale, dict }: AdminLiveMetricsProps) {
         {stats.map((stat, idx) => (
           <Card key={idx} variant="elevated" className="p-5">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-[#94a3b8]">{stat.label}</span>
+              <span className="text-xs font-medium text-secondary">{stat.label}</span>
               <div className="glass rounded-xl p-2">
                 {stat.icon}
               </div>
             </div>
             <div className="mt-3">
-              <div className="text-2xl font-bold text-[#f8fafc]">{stat.value}</div>
-              <p className="mt-1 text-[11px] text-[#caa95a]">{stat.change}</p>
+              <div className="text-2xl font-bold text-primary">{stat.value}</div>
+              <p className="mt-1 text-[11px] text-gold">{stat.change}</p>
             </div>
           </Card>
         ))}
@@ -115,7 +115,7 @@ export function AdminLiveMetrics({ locale, dict }: AdminLiveMetricsProps) {
               <CardTitle>{dict.dashboard.todaySchedule.title}</CardTitle>
               <Link
                 href={`/${locale}/calendar`}
-                className="text-xs text-[#caa95a] hover:text-[#dfbf70] transition-colors"
+                className="text-xs text-gold hover:text-gold-hover transition-colors"
               >
                 {dict.dashboard.quickActions.viewCalendar} →
               </Link>
@@ -125,7 +125,7 @@ export function AdminLiveMetrics({ locale, dict }: AdminLiveMetricsProps) {
             <div className="hidden sm:block overflow-x-auto">
               <table className="w-full text-left rtl:text-right text-xs">
                 <thead>
-                  <tr className="border-b glass-divider text-[#64748b]">
+                  <tr className="border-b glass-divider text-muted">
                     <th className="pb-3 font-medium">{dict.dashboard.todaySchedule.time}</th>
                     <th className="pb-3 font-medium">{dict.dashboard.todaySchedule.patient}</th>
                     <th className="pb-3 font-medium">{dict.dashboard.todaySchedule.doctor}</th>
@@ -133,17 +133,17 @@ export function AdminLiveMetrics({ locale, dict }: AdminLiveMetricsProps) {
                     <th className="pb-3 font-medium">{dict.dashboard.todaySchedule.status}</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#24314c]/50">
+                <tbody className="divide-y divide-slate-200">
                   {appointments.length > 0 ? (
                     appointments.slice(0, 5).map((row, idx) => (
                       <tr key={idx} className="glass-hover transition-colors">
-                        <td className="py-3.5 font-medium text-[#caa95a]">{row.time}</td>
+                        <td className="py-3.5 font-medium text-gold">{row.time}</td>
                         <td className="py-3.5">
-                          <div className="font-semibold text-[#f8fafc]">{row.patientName}</div>
-                          <div className="text-[10px] text-[#64748b]">{row.patientCode}</div>
+                          <div className="font-semibold text-primary">{row.patientName}</div>
+                          <div className="text-[10px] text-muted">{row.patientCode}</div>
                         </td>
-                        <td className="py-3.5 text-[#94a3b8]">{row.doctorName}</td>
-                        <td className="py-3.5 text-[#f8fafc]">{row.procedure}</td>
+                        <td className="py-3.5 text-secondary">{row.doctorName}</td>
+                        <td className="py-3.5 text-primary">{row.procedure}</td>
                         <td className="py-3.5">
                           <Badge
                             variant={
@@ -161,7 +161,7 @@ export function AdminLiveMetrics({ locale, dict }: AdminLiveMetricsProps) {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={5} className="py-8 text-center text-xs text-[#64748b]">
+                      <td colSpan={5} className="py-8 text-center text-xs text-muted">
                         {isAr ? "لا توجد مواعيد مجدولة لليوم." : "No appointments scheduled for today."}
                       </td>
                     </tr>
@@ -171,12 +171,12 @@ export function AdminLiveMetrics({ locale, dict }: AdminLiveMetricsProps) {
             </div>
 
             {/* Mobile Stacked Card View */}
-            <div className="sm:hidden divide-y divide-[#24314c]/50 space-y-3">
+            <div className="sm:hidden divide-y divide-slate-200 space-y-3">
               {appointments.length > 0 ? (
                 appointments.slice(0, 5).map((row, idx) => (
                   <div key={idx} className="pt-3 first:pt-0 space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="font-mono text-xs font-bold text-[#caa95a]">{row.time}</span>
+                      <span className="font-mono text-xs font-bold text-gold">{row.time}</span>
                       <Badge
                         variant={
                           row.status === "COMPLETED"
@@ -191,14 +191,14 @@ export function AdminLiveMetrics({ locale, dict }: AdminLiveMetricsProps) {
                       </Badge>
                     </div>
                     <div>
-                      <span className="font-semibold text-sm text-[#f8fafc] block">{row.patientName}</span>
-                      <span className="font-mono text-[10px] text-[#64748b]">{row.patientCode} • {row.doctorName}</span>
+                      <span className="font-semibold text-sm text-primary block">{row.patientName}</span>
+                      <span className="font-mono text-[10px] text-muted">{row.patientCode} • {row.doctorName}</span>
                     </div>
                     <p className="text-xs text-[#cbd5e1] font-medium">{row.procedure}</p>
                   </div>
                 ))
               ) : (
-                <div className="py-6 text-center text-xs text-[#64748b]">
+                <div className="py-6 text-center text-xs text-muted">
                   {isAr ? "لا توجد مواعيد مجدولة لليوم." : "No appointments scheduled for today."}
                 </div>
               )}
@@ -224,15 +224,15 @@ export function AdminLiveMetrics({ locale, dict }: AdminLiveMetricsProps) {
                       <Badge variant="gold" size="sm">
                         PATIENT
                       </Badge>
-                      <span className="text-[10px] text-[#64748b]">{p.lastVisit}</span>
+                      <span className="text-[10px] text-muted">{p.lastVisit}</span>
                     </div>
-                    <p className="text-[#f8fafc] leading-relaxed">
-                      Registered patient file for <span className="font-bold text-[#caa95a]">{p.fullName}</span> ({p.code})
+                    <p className="text-primary leading-relaxed">
+                      Registered patient file for <span className="font-bold text-gold">{p.fullName}</span> ({p.code})
                     </p>
                   </div>
                 ))
               ) : (
-                <div className="py-8 text-center text-xs text-[#64748b]">
+                <div className="py-8 text-center text-xs text-muted">
                   No audit activity logged yet.
                 </div>
               )}
@@ -241,7 +241,7 @@ export function AdminLiveMetrics({ locale, dict }: AdminLiveMetricsProps) {
             <div className="mt-4 pt-4 border-t glass-divider text-center">
               <Link
                 href={`/${locale}/activity`}
-                className="text-xs text-[#caa95a] hover:underline"
+                className="text-xs text-gold hover:underline"
               >
                 {dict.dashboard.activityLog.viewAll}
               </Link>

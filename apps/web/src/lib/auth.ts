@@ -1,5 +1,6 @@
 import { apiClient } from "./api-client";
 import type { AuthenticatedUser } from "../types/auth";
+import { clearSessionUser, persistSessionUser } from "./session";
 
 export interface LoginPayload {
   email: string;
@@ -14,6 +15,7 @@ export async function loginUser(payload: LoginPayload): Promise<AuthenticatedUse
   if (user.access_token && typeof window !== "undefined") {
     localStorage.setItem("doc_access_token", user.access_token);
   }
+  persistSessionUser(user);
   return user;
 }
 
@@ -24,6 +26,7 @@ export async function refreshUserSession(): Promise<AuthenticatedUser> {
   if (user.access_token && typeof window !== "undefined") {
     localStorage.setItem("doc_access_token", user.access_token);
   }
+  persistSessionUser(user);
   return user;
 }
 
@@ -35,17 +38,21 @@ export async function logoutUser(): Promise<{ status: string }> {
     if (typeof window !== "undefined") {
       localStorage.removeItem("doc_access_token");
     }
+    clearSessionUser();
     return res;
   } catch {
     if (typeof window !== "undefined") {
       localStorage.removeItem("doc_access_token");
     }
+    clearSessionUser();
     return { status: "logged_out" };
   }
 }
 
 export async function getCurrentUser(): Promise<AuthenticatedUser> {
-  return apiClient<AuthenticatedUser>("/auth/me");
+  const user = await apiClient<AuthenticatedUser>("/auth/me");
+  persistSessionUser(user);
+  return user;
 }
 
 export async function requestPasswordReset(email: string): Promise<{ status: string; message: string }> {

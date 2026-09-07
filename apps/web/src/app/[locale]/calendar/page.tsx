@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { AppShell } from "../../../components/layout/AppShell";
+import { PageHeader } from "../../../components/layout/PageHeader";
 import { Badge } from "../../../components/ui/Badge";
 import { Modal } from "../../../components/ui/Modal";
 import { Button } from "../../../components/ui/Button";
@@ -50,35 +51,31 @@ export default function CalendarPage() {
   ];
 
   return (
-    <AppShell locale={locale} role="ADMIN">
+    <AppShell locale={locale}>
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-xl font-bold tracking-tight text-[#f8fafc] sm:text-2xl">
-              {dict.calendar.title}
-            </h1>
-            <p className="mt-1 text-xs text-[#94a3b8]">
-              {dict.calendar.subtitle}
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => setIsBookingOpen(true)}
-            >
-              {dict.calendar.bookAppointment}
-            </Button>
-          </div>
-        </div>
+        <PageHeader
+          title={dict.calendar.title}
+          subtitle={dict.calendar.subtitle}
+          actions={
+            <>
+              <Link
+                href={`/${locale}/reservations`}
+                className="inline-flex items-center gap-1.5 glass rounded-xl px-3.5 py-2 text-xs font-medium text-primary glass-hover transition-colors"
+              >
+                {dict.nav.reservations}
+              </Link>
+              <Button variant="primary" size="sm" onClick={() => setIsBookingOpen(true)}>
+                {dict.calendar.bookAppointment}
+              </Button>
+            </>
+          }
+        />
 
         {/* Calendar Controls Bar */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 glass-card rounded-2xl p-3">
           {/* Date Navigator */}
           <div className="flex items-center gap-2 w-full sm:w-auto">
-            <span className="font-bold text-xs text-[#f8fafc] px-2">
+            <span className="font-bold text-xs text-primary px-2">
               {locale === "ar" ? "جدول العمليات والعيادة السنية" : "Clinical Practice Schedule"}
             </span>
           </div>
@@ -88,7 +85,7 @@ export default function CalendarPage() {
             <select
               value={selectedDoctor}
               onChange={(e) => setSelectedDoctor(e.target.value)}
-              className="glass rounded-xl px-3 py-1.5 text-xs text-[#f8fafc] focus:border-[#caa95a] focus:outline-none"
+              className="glass rounded-xl px-3 py-1.5 text-xs text-primary focus:border-[#caa95a] focus:outline-none"
             >
               <option value="ALL">{dict.calendar.filterDoctor}: {locale === "ar" ? "الكل" : "All"}</option>
               {INITIAL_DOCTORS.map((d) => (
@@ -107,8 +104,8 @@ export default function CalendarPage() {
                   onClick={() => setCurrentView(view)}
                   className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors whitespace-nowrap ${
                     currentView === view
-                      ? "bg-[#caa95a] text-[#0a0d14] font-semibold"
-                      : "text-[#94a3b8] hover:text-[#f8fafc]"
+                      ? "bg-[#caa95a] text-on-gold font-semibold"
+                      : "text-secondary hover:text-primary"
                   }`}
                 >
                   {view === "Day" ? dict.calendar.views.day : view === "Week" ? dict.calendar.views.week : view === "Month" ? dict.calendar.views.month : dict.calendar.views.agenda}
@@ -121,10 +118,10 @@ export default function CalendarPage() {
         {/* Calendar Day Slots View */}
         <div className="glass-card rounded-2xl overflow-hidden shadow-xl">
           <div className="flex items-center justify-between p-4 border-b glass-divider/60">
-            <span className="text-xs font-semibold text-[#caa95a]">
+            <span className="text-xs font-semibold text-gold">
               {locale === "ar" ? "الجدول الزمني لليوم" : "Daily Operatory Timeline"}
             </span>
-            <span className="text-xs text-[#94a3b8]">
+            <span className="text-xs text-secondary">
               {filteredAppointments.length} {locale === "ar" ? "مواعيد مجدولة" : "Appointments"}
             </span>
           </div>
@@ -138,7 +135,7 @@ export default function CalendarPage() {
                   key={slot}
                   className="flex flex-col sm:flex-row sm:items-center gap-3 py-2 border-b glass-divider/30 last:border-0"
                 >
-                  <div className="w-20 shrink-0 font-mono text-xs font-bold text-[#94a3b8]">
+                  <div className="w-20 shrink-0 font-mono text-xs font-bold text-secondary">
                     {slot}
                   </div>
 
@@ -147,10 +144,10 @@ export default function CalendarPage() {
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="font-semibold text-xs text-[#f8fafc]">
+                            <span className="font-semibold text-xs text-primary">
                               {matchedAppt.patientName}
                             </span>
-                            <span className="font-mono text-[10px] text-[#caa95a]">
+                            <span className="font-mono text-[10px] text-gold">
                               {matchedAppt.patientCode}
                             </span>
                             <Badge variant="green" size="sm">
@@ -160,7 +157,7 @@ export default function CalendarPage() {
                           <p className="text-xs text-[#cbd5e1] mt-1 font-medium">
                             {matchedAppt.procedure}
                           </p>
-                          <p className="text-[11px] text-[#94a3b8] mt-0.5">
+                          <p className="text-[11px] text-secondary mt-0.5">
                             {matchedAppt.doctorName} • {matchedAppt.location}
                           </p>
                         </div>
@@ -168,13 +165,13 @@ export default function CalendarPage() {
                         <div className="flex items-center gap-2">
                           <Link
                             href={`/${locale}/patients/${matchedAppt.patientCode}`}
-                            className="rounded-lg glass px-2.5 py-1 text-[11px] text-[#94a3b8] hover:text-[#f8fafc]"
+                            className="rounded-lg glass px-2.5 py-1 text-[11px] text-secondary hover:text-primary"
                           >
                             {dict.patients.table.viewChart}
                           </Link>
                           <Link
                             href={`/${locale}/patients/${matchedAppt.patientCode}/visit/new`}
-                            className="rounded-lg bg-[#caa95a]/15 border border-[#caa95a]/30 px-2.5 py-1 text-[11px] font-medium text-[#caa95a] hover:bg-[#caa95a]/25"
+                            className="rounded-lg bg-[#caa95a]/15 border border-[#caa95a]/30 px-2.5 py-1 text-[11px] font-medium text-gold hover:bg-[#caa95a]/25"
                           >
                             {dict.patients.table.recordVisit}
                           </Link>
@@ -182,7 +179,7 @@ export default function CalendarPage() {
                       </div>
                     </div>
                   ) : (
-                    <div className="glass flex-1 rounded-xl border-dashed p-2.5 text-xs text-[#64748b]">
+                    <div className="glass flex-1 rounded-xl border-dashed p-2.5 text-xs text-muted">
                       {locale === "ar" ? "الوقت متاح للحجز" : "Chair available for booking"}
                     </div>
                   )}
@@ -230,10 +227,10 @@ export default function CalendarPage() {
           className="space-y-4 text-xs"
         >
           <div>
-            <label className="block text-xs font-medium text-[#94a3b8] mb-1">
+            <label className="block text-xs font-medium text-secondary mb-1">
               {locale === "ar" ? "اختيار المريض" : "Select Patient"}
             </label>
-            <select name="patientCode" required className="w-full glass rounded-xl px-3.5 py-2 text-xs text-[#f8fafc] focus:border-[#caa95a] focus:outline-none">
+            <select name="patientCode" required className="w-full glass rounded-xl px-3.5 py-2 text-xs text-primary focus:border-[#caa95a] focus:outline-none">
               {patients.length > 0 ? (
                 patients.map((p) => (
                   <option key={p.id} value={p.code}>
@@ -247,10 +244,10 @@ export default function CalendarPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-[#94a3b8] mb-1">
+            <label className="block text-xs font-medium text-secondary mb-1">
               {dict.calendar.filterDoctor}
             </label>
-            <select name="doctorName" className="w-full glass rounded-xl px-3.5 py-2 text-xs text-[#f8fafc] focus:border-[#caa95a] focus:outline-none">
+            <select name="doctorName" className="w-full glass rounded-xl px-3.5 py-2 text-xs text-primary focus:border-[#caa95a] focus:outline-none">
               {INITIAL_DOCTORS.map((d) => (
                 <option key={d.id} value={d.name}>
                   {d.name} ({d.specialization})
@@ -266,10 +263,10 @@ export default function CalendarPage() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-[#94a3b8] mb-1">
+              <label className="block text-xs font-medium text-secondary mb-1">
                 {locale === "ar" ? "المدة المتوقعة" : "Duration"}
               </label>
-              <select name="duration" className="w-full glass rounded-xl px-3.5 py-2 text-xs text-[#f8fafc] focus:border-[#caa95a] focus:outline-none">
+              <select name="duration" className="w-full glass rounded-xl px-3.5 py-2 text-xs text-primary focus:border-[#caa95a] focus:outline-none">
                 <option value="30">30 {locale === "ar" ? "دقيقة" : "Minutes"}</option>
                 <option value="45">45 {locale === "ar" ? "دقيقة" : "Minutes"}</option>
                 <option value="60">60 {locale === "ar" ? "دقيقة" : "Minutes"}</option>
@@ -277,10 +274,10 @@ export default function CalendarPage() {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-[#94a3b8] mb-1">
+              <label className="block text-xs font-medium text-secondary mb-1">
                 {locale === "ar" ? "الغرفة / الكرسي" : "Clinic Room"}
               </label>
-              <select name="room" className="w-full glass rounded-xl px-3.5 py-2 text-xs text-[#f8fafc] focus:border-[#caa95a] focus:outline-none">
+              <select name="room" className="w-full glass rounded-xl px-3.5 py-2 text-xs text-primary focus:border-[#caa95a] focus:outline-none">
                 <option>{locale === "ar" ? "عيادة ١ — الكرسي الرئيسي" : "Room 1 — Main Operatory"}</option>
                 <option>{locale === "ar" ? "عيادة ٢ — جناح علاج الجذور" : "Room 2 — Periodontal Suite"}</option>
                 <option>{locale === "ar" ? "عيادة ٣ — جراحة الفم والأسنان" : "Room 3 — Surgical Suite"}</option>

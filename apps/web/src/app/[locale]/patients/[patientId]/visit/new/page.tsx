@@ -3,9 +3,9 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { AppNavbar } from "../../../../../../components/layout/AppNavbar";
-import { AppSidebar } from "../../../../../../components/layout/AppSidebar";
-import { MobileNav } from "../../../../../../components/layout/MobileNav";
+import { AppShell } from "../../../../../../components/layout/AppShell";
+import { PageHeader } from "../../../../../../components/layout/PageHeader";
+import { Breadcrumb } from "../../../../../../components/layout/Breadcrumb";
 import { Textarea } from "../../../../../../components/ui/Textarea";
 import { Button } from "../../../../../../components/ui/Button";
 import { Badge } from "../../../../../../components/ui/Badge";
@@ -160,70 +160,40 @@ export default function NewVisitPage() {
   ];
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#080a0f] text-[#f8fafc]">
-      <AppNavbar
-        locale={locale}
-        userName="Operations Director"
-        userRole="ADMIN"
-        brandName={dict.brand.name}
-        brandTag={dict.brand.tagline}
-        logoutText={dict.nav.logout}
-        adminLabel={dict.roles.admin}
-        doctorLabel={dict.roles.doctor}
-      />
-
-      <div className="flex flex-1 overflow-hidden">
-        <div className="hidden md:flex">
-          <AppSidebar
-            locale={locale}
-            role="ADMIN"
-            dict={dict.nav}
-          />
-        </div>
-
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 pb-32 md:pb-20">
+    <AppShell locale={locale}>
           <div className="max-w-4xl mx-auto space-y-6">
-            {/* Top Navigation & Context Banner */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b glass-divider">
-              <div>
-                <div className="flex items-center gap-2 text-xs text-[#94a3b8] mb-1">
-                  <Link href={`/${locale}/patients`} className="hover:text-[#caa95a] transition-colors">
-                    {dict.nav.patients}
-                  </Link>
-                  <span>/</span>
-                  <Link href={`/${locale}/patients/${patient.code}`} className="font-mono text-[#caa95a] hover:underline">
-                    {patient.code}
-                  </Link>
-                  <span>/</span>
-                  <span className="text-[#f8fafc]">{locale === "ar" ? "توثيق زيارة سريرية" : "New Visit"}</span>
-                </div>
-                <h1 className="text-xl sm:text-2xl font-bold text-[#f8fafc]">
-                  {locale === "ar" ? "تسجيل جلسة وعلاج سريري" : "Record Clinical Treatment Session"}
-                </h1>
-                <p className="text-xs text-[#94a3b8] mt-0.5">
-                  {locale === "ar" ? "المريض" : "Patient"}: <strong className="text-[#f8fafc]">{patient.fullName}</strong> ({patient.code}) • {locale === "ar" ? "الطبيب المعالج" : "Treating Doctor"}: <strong className="text-[#caa95a]">{patient.assignedDoctor}</strong>
-                </p>
-              </div>
+            <PageHeader
+              breadcrumb={
+                <Breadcrumb
+                  items={[
+                    { label: dict.nav.patients, href: `/${locale}/patients` },
+                    { label: patient.code, href: `/${locale}/patients/${patient.code}` },
+                    { label: locale === "ar" ? "توثيق زيارة سريرية" : "New Visit" },
+                  ]}
+                />
+              }
+              title={locale === "ar" ? "تسجيل جلسة وعلاج سريري" : "Record Clinical Treatment Session"}
+              subtitle={`${locale === "ar" ? "المريض" : "Patient"}: ${patient.fullName} (${patient.code}) • ${locale === "ar" ? "الطبيب المعالج" : "Treating Doctor"}: ${patient.assignedDoctor}`}
+            />
 
               {/* Medical Alerts Banner */}
               {patient.medicalAlerts.length > 0 && (
-                <div className="flex items-center gap-2 rounded-xl border border-rose-500/30 bg-rose-950/20 px-3 py-2 text-xs text-rose-300">
+                <div className="flex items-center gap-2 rounded-xl border border-rose-500/30 bg-rose-50 px-3 py-2 text-xs text-rose-700">
                   <svg className="h-4 w-4 shrink-0 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                   </svg>
                   <span>{patient.medicalAlerts.join(", ")}</span>
                 </div>
               )}
-            </div>
 
             {/* Section 1: Chief Complaint */}
             <div className="glass-card rounded-2xl p-5 sm:p-6 space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-sm font-semibold text-[#f8fafc]">
+                  <h3 className="text-sm font-semibold text-primary">
                     1. {locale === "ar" ? "الشكوى الرئيسية للمريض (Chief Complaint)" : "Patient Chief Complaint"}
                   </h3>
-                  <p className="text-xs text-[#94a3b8] mt-0.5">
+                  <p className="text-xs text-secondary mt-0.5">
                     {locale === "ar" ? "سبب حضور المريض أو حجز الموعد بكلماته الخاصة" : "Document the presenting symptom or reservation request"}
                   </p>
                 </div>
@@ -241,7 +211,7 @@ export default function NewVisitPage() {
                     key={i}
                     type="button"
                     onClick={() => setChiefComplaint((prev) => (prev ? `${prev}. ${sym}` : sym))}
-                    className="rounded-lg glass px-2.5 py-1 text-[11px] text-[#94a3b8] hover:border-[#caa95a]/50 hover:text-[#f8fafc] transition-colors"
+                    className="rounded-lg glass px-2.5 py-1 text-[11px] text-secondary hover:border-[#caa95a]/50 hover:text-primary transition-colors"
                   >
                     + {sym}
                   </button>
@@ -258,7 +228,7 @@ export default function NewVisitPage() {
 
             {/* Section 2: Clinical Findings & Diagnosis */}
             <div className="glass-card rounded-2xl p-5 sm:p-6 space-y-4">
-              <h3 className="text-sm font-semibold text-[#f8fafc]">
+              <h3 className="text-sm font-semibold text-primary">
                 2. {locale === "ar" ? "الفحص السريري والتشخيص الطبي (Examination & Diagnosis)" : "Clinical Examination & Diagnosis"}
               </h3>
 
@@ -284,10 +254,10 @@ export default function NewVisitPage() {
             <div className="glass-card rounded-2xl p-5 sm:p-6 space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-sm font-semibold text-[#f8fafc]">
+                  <h3 className="text-sm font-semibold text-primary">
                     3. {locale === "ar" ? "الإجراءات المنفذة والتسعير (Procedures & Fees)" : "Procedures Executed & Clinical Fees"}
                   </h3>
-                  <p className="text-xs text-[#94a3b8] mt-0.5">
+                  <p className="text-xs text-secondary mt-0.5">
                     {locale === "ar"
                       ? "اختر من لائحة الأسعار الرسمية أو حدد إجراءً يدوياً بسعر مخصص"
                       : "Choose from standard fee schedule or sign a manual custom procedure"}
@@ -298,7 +268,7 @@ export default function NewVisitPage() {
                   <button
                     type="button"
                     onClick={addManualProcedure}
-                    className="glass rounded-xl px-3 py-1.5 text-xs font-semibold text-[#94a3b8] hover:text-[#f8fafc] hover:border-[#caa95a]/40 transition-colors"
+                    className="glass rounded-xl px-3 py-1.5 text-xs font-semibold text-secondary hover:text-primary hover:border-[#caa95a]/40 transition-colors"
                   >
                     + {locale === "ar" ? "إجراء يدوي بسعر مخصص" : "Manual / Custom Procedure"}
                   </button>
@@ -307,7 +277,7 @@ export default function NewVisitPage() {
 
               {/* Price List Catalog Quick Selector */}
               <div className="glass rounded-xl p-3 space-y-2">
-                <label className="block text-[11px] font-semibold text-[#caa95a]">
+                <label className="block text-[11px] font-semibold text-gold">
                   {locale === "ar" ? "📋 اختيار سريع من لائحة أسعار العيادة الرسمية:" : "📋 Quick Add from Standard Dental Fee Schedule:"}
                 </label>
                 <div className="flex items-center gap-2">
@@ -320,7 +290,7 @@ export default function NewVisitPage() {
                         e.target.value = "";
                       }
                     }}
-                    className="w-full glass rounded-xl px-3 py-2 text-xs text-[#f8fafc] focus:border-[#caa95a] focus:outline-none"
+                    className="w-full glass rounded-xl px-3 py-2 text-xs text-primary focus:border-[#caa95a] focus:outline-none"
                   >
                     <option value="" disabled>
                       {locale === "ar" ? "-- اضغط لاختيار إجراء من لائحة الأسعار --" : "-- Select procedure from price list catalog --"}
@@ -374,7 +344,7 @@ export default function NewVisitPage() {
               {/* Active Procedures List */}
               <div className="space-y-3 pt-2">
                 {procedures.length === 0 ? (
-                  <div className="glass-card rounded-xl border-dashed p-6 text-center text-xs text-[#64748b]">
+                  <div className="glass-card rounded-xl border-dashed p-6 text-center text-xs text-muted">
                     {locale === "ar"
                       ? "لم يتم تحديد أي إجراءات بعد. اختر إجراءً من اللائحة أعلاه أو أضف إجراءً مخصصاً."
                       : "No procedures cataloged yet. Select from the fee schedule above or add a manual custom procedure."}
@@ -392,13 +362,13 @@ export default function NewVisitPage() {
                               ? (locale === "ar" ? "سعر يدوي مخصص" : "Manual Doctor Fee")
                               : (locale === "ar" ? "لائحة الأسعار الرسمية" : "Fee Schedule")}
                           </Badge>
-                          <span className="text-[10px] text-[#64748b] font-mono">{p.id.slice(0, 10)}</span>
+                          <span className="text-[10px] text-muted font-mono">{p.id.slice(0, 10)}</span>
                         </div>
 
                         <button
                           type="button"
                           onClick={() => removeProcedure(p.id)}
-                          className="rounded p-1 text-[#64748b] hover:text-rose-400 transition-colors"
+                          className="rounded p-1 text-muted hover:text-rose-400 transition-colors"
                           title={locale === "ar" ? "حذف الإجراء" : "Remove"}
                         >
                           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -409,19 +379,19 @@ export default function NewVisitPage() {
 
                       <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
                         <div className="sm:col-span-6">
-                          <label className="block text-[10px] text-[#64748b] mb-1">
+                          <label className="block text-[10px] text-muted mb-1">
                             {locale === "ar" ? "اسم الإجراء الطبي" : "Procedure Name"}
                           </label>
                           <input
                             type="text"
                             value={p.name}
                             onChange={(e) => updateProcedure(p.id, { name: e.target.value })}
-                            className="w-full rounded-lg glass px-3 py-1.5 text-xs text-[#f8fafc] focus:border-[#caa95a] focus:outline-none font-medium"
+                            className="w-full rounded-lg glass px-3 py-1.5 text-xs text-primary focus:border-[#caa95a] focus:outline-none font-medium"
                           />
                         </div>
 
                         <div className="sm:col-span-3">
-                          <label className="block text-[10px] text-[#64748b] mb-1">
+                          <label className="block text-[10px] text-muted mb-1">
                             {locale === "ar" ? "رقم السن / الموضع" : "Tooth # / Site"}
                           </label>
                           <input
@@ -429,12 +399,12 @@ export default function NewVisitPage() {
                             value={p.tooth}
                             onChange={(e) => updateProcedure(p.id, { tooth: e.target.value })}
                             placeholder="e.g. #36 or Universal"
-                            className="w-full rounded-lg glass px-3 py-1.5 text-xs text-[#f8fafc] font-mono focus:border-[#caa95a] focus:outline-none"
+                            className="w-full rounded-lg glass px-3 py-1.5 text-xs text-primary font-mono focus:border-[#caa95a] focus:outline-none"
                           />
                         </div>
 
                         <div className="sm:col-span-3">
-                          <label className="block text-[10px] text-[#64748b] mb-1">
+                          <label className="block text-[10px] text-muted mb-1">
                             {locale === "ar" ? "التكلفة السريرية (ج.م)" : "Fee (EGP)"}
                           </label>
                           <input
@@ -443,7 +413,7 @@ export default function NewVisitPage() {
                             step={50}
                             value={p.cost}
                             onChange={(e) => updateProcedure(p.id, { cost: Number(e.target.value) || 0 })}
-                            className="w-full rounded-lg glass px-3 py-1.5 text-xs text-[#f8fafc] font-mono font-bold focus:border-[#caa95a] focus:outline-none text-emerald-400"
+                            className="w-full rounded-lg glass px-3 py-1.5 text-xs text-primary font-mono font-bold focus:border-[#caa95a] focus:outline-none text-emerald-400"
                           />
                         </div>
                       </div>
@@ -453,13 +423,13 @@ export default function NewVisitPage() {
 
                 {/* Financial Ledger Attestation Card */}
                 {procedures.length > 0 && (
-                  <div className="rounded-2xl border border-[#caa95a]/40 bg-gradient-to-br from-[#caa95a]/10 via-[#151d2c] to-[#101622] p-4 space-y-2 shadow-xl">
+                  <div className="rounded-2xl border border-[#caa95a]/40 bg-gradient-to-br from-[#caa95a]/10 via-white to-slate-50 p-4 space-y-2 shadow-xl">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b glass-divider pb-3">
                       <div>
-                        <span className="text-xs font-semibold text-[#caa95a] block">
+                        <span className="text-xs font-semibold text-gold block">
                           {locale === "ar" ? "الأثر المالي المباشر للجلسة:" : "Session Financial Settlement Impact:"}
                         </span>
-                        <span className="text-[11px] text-[#94a3b8]">
+                        <span className="text-[11px] text-secondary">
                           {locale === "ar"
                             ? "سيتم قيد إيراد المعاملة تلقائياً في الدفتر المالي العام فور الاعتماد"
                             : "Auto-posts as credited revenue transaction in general ledger upon completion"}
@@ -467,16 +437,16 @@ export default function NewVisitPage() {
                       </div>
 
                       <div className="text-end sm:text-right rtl:sm:text-left">
-                        <span className="text-[10px] text-[#64748b] block">{locale === "ar" ? "إجمالي قيمة الإجراءات" : "Total Treatment Value"}</span>
-                        <span className="text-xl font-mono font-bold text-[#caa95a]">
+                        <span className="text-[10px] text-muted block">{locale === "ar" ? "إجمالي قيمة الإجراءات" : "Total Treatment Value"}</span>
+                        <span className="text-xl font-mono font-bold text-gold">
                           {totalCost.toLocaleString()} {locale === "ar" ? "ج.م" : "EGP"}
                         </span>
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between text-[11px] text-[#64748b] pt-1">
+                    <div className="flex items-center justify-between text-[11px] text-muted pt-1">
                       <span>{locale === "ar" ? "عدد الإجراءات المدرجة:" : "Procedures Itemized:"} {procedures.length}</span>
-                      <span className="text-[#caa95a] font-medium">
+                      <span className="text-gold font-medium">
                         ✓ {locale === "ar" ? "معتمد بتوقيع الطبيب المعالج" : "Doctor Attestation: Validated"}
                       </span>
                     </div>
@@ -487,7 +457,7 @@ export default function NewVisitPage() {
 
             {/* Section 4: Prescriptions & Doctor Notes */}
             <div className="glass-card rounded-2xl p-5 sm:p-6 space-y-4">
-              <h3 className="text-sm font-semibold text-[#f8fafc]">
+              <h3 className="text-sm font-semibold text-primary">
                 4. {locale === "ar" ? "الوصفة الطبية وتوصيات الرعاية المنزلية" : "Prescriptions & Home Care Instructions"}
               </h3>
 
@@ -509,16 +479,14 @@ export default function NewVisitPage() {
               </div>
             </div>
           </div>
-        </main>
-      </div>
 
       {/* Sticky Bottom Action Bar */}
-      <div className="fixed bottom-0 inset-x-0 z-30 border-t glass-divider bg-[#0a0d14]/95 px-4 py-3 backdrop-blur-md">
+      <div className="fixed bottom-16 md:bottom-0 inset-x-0 z-30 border-t glass-divider bg-[#f4f6fb]/95 px-4 py-3 backdrop-blur-md">
         <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
           <div className="text-xs">
-            <span className="text-[#94a3b8]">{locale === "ar" ? "توثيق لجلسة: " : "Documenting: "}</span>
-            <strong className="text-[#f8fafc]">{patient.fullName}</strong>
-            <span className="font-mono text-[#caa95a] ms-2 font-bold">
+            <span className="text-secondary">{locale === "ar" ? "توثيق لجلسة: " : "Documenting: "}</span>
+            <strong className="text-primary">{patient.fullName}</strong>
+            <span className="font-mono text-gold ms-2 font-bold">
               • {totalCost.toLocaleString()} {locale === "ar" ? "ج.م" : "EGP"}
             </span>
           </div>
@@ -526,7 +494,7 @@ export default function NewVisitPage() {
           <div className="flex items-center gap-3">
             <Link
               href={`/${locale}/patients/${patient.code}`}
-              className="glass rounded-xl px-3 py-1.5 text-xs font-medium text-[#94a3b8] hover:text-[#f8fafc] transition-colors"
+              className="glass rounded-xl px-3 py-1.5 text-xs font-medium text-secondary hover:text-primary transition-colors"
             >
               {locale === "ar" ? "إلغاء" : "Cancel"}
             </Link>
@@ -542,8 +510,6 @@ export default function NewVisitPage() {
           </div>
         </div>
       </div>
-
-      <MobileNav locale={locale} role="ADMIN" />
-    </div>
+    </AppShell>
   );
 }

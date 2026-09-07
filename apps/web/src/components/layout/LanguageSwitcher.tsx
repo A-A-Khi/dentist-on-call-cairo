@@ -44,8 +44,8 @@ export function LanguageSwitcher({ currentLocale }: LanguageSwitcherProps) {
         aria-label="Switch to English"
         className={`rounded-lg px-2.5 py-1 font-medium transition-all ${
           currentLocale === "en"
-            ? "bg-[#caa95a] text-[#0a0d14] font-semibold shadow-sm"
-            : "text-[#94a3b8] hover:text-[#f8fafc]"
+            ? "bg-[#caa95a] text-on-gold font-semibold shadow-sm"
+            : "text-secondary hover:text-primary"
         }`}
       >
         EN
@@ -56,8 +56,8 @@ export function LanguageSwitcher({ currentLocale }: LanguageSwitcherProps) {
         aria-label="التبديل إلى العربية"
         className={`rounded-lg px-2.5 py-1 font-medium transition-all ${
           currentLocale === "ar"
-            ? "bg-[#caa95a] text-[#0a0d14] font-semibold shadow-sm"
-            : "text-[#94a3b8] hover:text-[#f8fafc]"
+            ? "bg-[#caa95a] text-on-gold font-semibold shadow-sm"
+            : "text-secondary hover:text-primary"
         }`}
       >
         العربية

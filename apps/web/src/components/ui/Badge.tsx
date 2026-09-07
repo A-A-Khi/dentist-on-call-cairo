@@ -18,13 +18,13 @@ export function Badge({
   };
 
   const variantStyles = {
-    gold: "bg-[#caa95a]/15 text-[#f5e8c7] border border-[#caa95a]/30",
-    emerald: "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30",
-    green: "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30",
-    blue: "bg-sky-500/15 text-sky-300 border border-sky-500/30",
-    amber: "bg-amber-500/15 text-amber-300 border border-amber-500/30",
-    rose: "bg-rose-500/15 text-rose-300 border border-rose-500/30",
-    neutral: "glass bg-white/5 text-[#94a3b8] border-white/10",
+    gold: "bg-amber-50 text-amber-800 border border-amber-200",
+    emerald: "bg-emerald-50 text-emerald-700 border border-emerald-200",
+    green: "bg-emerald-50 text-emerald-700 border border-emerald-200",
+    blue: "bg-sky-50 text-sky-700 border border-sky-200",
+    amber: "bg-amber-50 text-amber-700 border border-amber-200",
+    rose: "bg-rose-50 text-rose-700 border border-rose-200",
+    neutral: "bg-slate-50 text-secondary border border-slate-200",
   };
 
   return (
