@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { AppShell } from "../../../../../../components/layout/AppShell";
@@ -22,7 +22,7 @@ interface ProcedureRow {
   isManual?: boolean;
 }
 
-export default function NewVisitPage() {
+function NewVisitPageContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -511,5 +511,13 @@ export default function NewVisitPage() {
         </div>
       </div>
     </AppShell>
+  );
+}
+
+export default function NewVisitPage() {
+  return (
+    <Suspense fallback={null}>
+      <NewVisitPageContent />
+    </Suspense>
   );
 }

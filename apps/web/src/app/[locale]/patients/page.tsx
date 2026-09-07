@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { AppShell } from "../../../components/layout/AppShell";
@@ -11,23 +11,16 @@ import { fetchPatients } from "../../../lib/clinical-api";
 import { getDictionarySync } from "../../../i18n/get-dictionary";
 import type { Patient } from "../../../lib/clinical-data";
 
-export default function PatientsPage() {
+function PatientsPageContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const locale = (params?.locale as string) || "en";
   const dict = getDictionarySync(locale);
-  const urlQuery = searchParams?.get("q") || "";
 
   const [patients, setPatients] = useState<Patient[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState(urlQuery);
+  const [searchQuery, setSearchQuery] = useState(() => searchParams.get("q") || "");
   const [statusFilter, setStatusFilter] = useState("ALL");
-  const [prevUrlQuery, setPrevUrlQuery] = useState(urlQuery);
-
-  if (urlQuery !== prevUrlQuery) {
-    setPrevUrlQuery(urlQuery);
-    setSearchQuery(urlQuery);
-  }
 
   useEffect(() => {
     let isMounted = true;
@@ -247,5 +240,13 @@ export default function PatientsPage() {
           </>
         )}
     </AppShell>
+  );
+}
+
+export default function PatientsPage() {
+  return (
+    <Suspense fallback={null}>
+      <PatientsPageContent />
+    </Suspense>
   );
 }
