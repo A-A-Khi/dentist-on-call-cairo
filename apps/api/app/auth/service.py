@@ -37,6 +37,46 @@ def login_is_rate_limited(session: Session, *, email: str, ip_address: str) -> b
     return len(session.scalars(attempts).all()) >= settings.login_rate_limit_attempts
 
 
+def password_reset_is_rate_limited(session: Session, *, email: str, ip_address: str) -> bool:
+    """Throttle password-reset requests per email+IP and per IP alone."""
+    settings = get_settings()
+    cutoff = datetime.now(UTC) - timedelta(minutes=settings.password_reset_rate_limit_minutes)
+    per_email = select(AuthLoginAttempt).where(
+        AuthLoginAttempt.email_hash == hash_identifier(f"reset:{email}"),
+        AuthLoginAttempt.ip_hash == hash_identifier(ip_address),
+        AuthLoginAttempt.occurred_at >= cutoff,
+    )
+    per_ip = select(AuthLoginAttempt).where(
+        AuthLoginAttempt.email_hash == hash_identifier("reset:any"),
+        AuthLoginAttempt.ip_hash == hash_identifier(ip_address),
+        AuthLoginAttempt.occurred_at >= cutoff,
+    )
+    email_count = len(session.scalars(per_email).all())
+    ip_count = len(session.scalars(per_ip).all())
+    limit = settings.password_reset_rate_limit_attempts
+    return email_count >= limit or ip_count >= (limit * 3)
+
+
+def record_password_reset_attempt(session: Session, *, email: str, ip_address: str) -> None:
+    now = datetime.now(UTC)
+    session.add(
+        AuthLoginAttempt(
+            email_hash=hash_identifier(f"reset:{email}"),
+            ip_hash=hash_identifier(ip_address),
+            succeeded=False,
+            occurred_at=now,
+        )
+    )
+    session.add(
+        AuthLoginAttempt(
+            email_hash=hash_identifier("reset:any"),
+            ip_hash=hash_identifier(ip_address),
+            succeeded=False,
+            occurred_at=now,
+        )
+    )
+
+
 def record_login_attempt(session: Session, *, email: str, ip_address: str, succeeded: bool) -> None:
     session.add(
         AuthLoginAttempt(
@@ -83,7 +123,23 @@ def rotate_refresh_session(session: Session, *, raw_token: str) -> tuple[User, R
         .with_for_update()
     )
     existing = session.scalar(query)
-    if existing is None or existing.revoked_at is not None or _ensure_utc(existing.expires_at) <= datetime.now(UTC):
+    if existing is None:
+        return None
+
+    # Reuse of an already-rotated/revoked refresh token → revoke the whole family.
+    if existing.revoked_at is not None:
+        user_sessions = session.scalars(
+            select(RefreshSession).where(
+                RefreshSession.user_id == existing.user_id,
+                RefreshSession.revoked_at.is_(None),
+            )
+        ).all()
+        now = datetime.now(UTC)
+        for s in user_sessions:
+            s.revoked_at = now
+        return None
+
+    if _ensure_utc(existing.expires_at) <= datetime.now(UTC):
         return None
     user = session.get(User, existing.user_id)
     if user is None or not user.is_active or user.organization_id != existing.organization_id:

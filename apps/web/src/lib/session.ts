@@ -36,4 +36,7 @@ export function getStoredSessionUser(): SessionUser | null {
 export function clearSessionUser(): void {
   if (typeof window === "undefined") return;
   localStorage.removeItem(SESSION_KEY);
+  const secure = window.location.protocol === "https:" ? "; Secure" : "";
+  document.cookie = `doc_authenticated=; Path=/; Max-Age=0; SameSite=Lax${secure}`;
+  document.cookie = `doc_role=; Path=/; Max-Age=0; SameSite=Lax${secure}`;
 }

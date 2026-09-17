@@ -28,20 +28,18 @@ export function getNavItems(locale: string, role: NavRole, dict: NavDict): NavIt
     { name: dict.patients, href: `/${locale}/patients`, key: "patients" },
     { name: dict.calendar, href: `/${locale}/calendar`, key: "calendar" },
     { name: dict.reservations, href: `/${locale}/reservations`, key: "reservations" },
-    { name: dict.doctors, href: `/${locale}/doctors`, key: "doctors" },
   ];
 
   if (role === "ADMIN") {
     items.push(
+      { name: dict.doctors, href: `/${locale}/doctors`, key: "doctors" },
       { name: dict.financials, href: `/${locale}/financials`, key: "financials" },
       { name: dict.reports, href: `/${locale}/reports`, key: "reports" },
+      { name: dict.activity, href: `/${locale}/activity`, key: "activity" },
     );
   }
 
-  items.push(
-    { name: dict.activity, href: `/${locale}/activity`, key: "activity" },
-    { name: dict.settings, href: `/${locale}/settings`, key: "settings" },
-  );
+  items.push({ name: dict.settings, href: `/${locale}/settings`, key: "settings" });
 
   return items;
 }

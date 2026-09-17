@@ -2,22 +2,41 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { AppShell } from "../../../components/layout/AppShell";
 import { PageHeader } from "../../../components/layout/PageHeader";
 import { Badge } from "../../../components/ui/Badge";
+import {
+  DataTable,
+  TableActions,
+  TableAmount,
+  TableText,
+  dash,
+  useTableDensity,
+  type DataColumn,
+  type SortState,
+} from "../../../components/ui/DataTable";
 import { Modal } from "../../../components/ui/Modal";
 import { Button } from "../../../components/ui/Button";
 import { Input } from "../../../components/ui/Input";
 import {
   fetchFinancialCategories,
+  fetchFinancialSummary,
   fetchFinancialTransactions,
   fetchOutstandingVisits,
   postFinancialTransaction,
   recordVisitPayment,
+  updateFinancialTransaction,
 } from "../../../lib/clinical-api";
 import { getDictionarySync } from "../../../i18n/get-dictionary";
-import type { FinancialCategory, FinancialTransaction, Visit } from "../../../lib/clinical-data";
+import type {
+  FinancialCategory,
+  FinancialSummary,
+  FinancialTransaction,
+  Visit,
+} from "../../../lib/clinical-data";
+import { getStoredSessionUser } from "../../../lib/session";
+import { getDashboardHref } from "../../../components/layout/nav-config";
 
 function visitMoney(v: Visit) {
   const total =
@@ -29,6 +48,7 @@ function visitMoney(v: Visit) {
 
 export default function FinancialsPage() {
   const params = useParams();
+  const router = useRouter();
   const locale = (params?.locale as string) || "en";
   const dict = getDictionarySync(locale);
   const isAr = locale === "ar";
@@ -37,32 +57,213 @@ export default function FinancialsPage() {
   const [transactions, setTransactions] = useState<FinancialTransaction[]>([]);
   const [categories, setCategories] = useState<FinancialCategory[]>([]);
   const [outstanding, setOutstanding] = useState<Visit[]>([]);
+  const [summary, setSummary] = useState<FinancialSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isPostOpen, setIsPostOpen] = useState(false);
+  const [editingTx, setEditingTx] = useState<FinancialTransaction | null>(null);
   const [txType, setTxType] = useState<"REVENUE" | "EXPENSE">("EXPENSE");
   const [categoryId, setCategoryId] = useState("");
+  const [editAmount, setEditAmount] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editDate, setEditDate] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    const role = getStoredSessionUser()?.role ?? "DOCTOR";
+    if (role !== "ADMIN") {
+      router.replace(getDashboardHref(locale, "DOCTOR"));
+    }
+  }, [locale, router]);
   const [postError, setPostError] = useState<string | null>(null);
   const [payingVisitId, setPayingVisitId] = useState<string | null>(null);
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [isPaying, setIsPaying] = useState(false);
+  const [density, setDensity] = useTableDensity("compact");
+  const [sort, setSort] = useState<SortState>({ id: "date", dir: "desc" });
 
   const filteredCategories = useMemo(
     () => categories.filter((c) => c.transactionType === txType && c.isActive),
     [categories, txType]
   );
 
+  const isEditModalOpen = editingTx !== null;
+  const isTxFormOpen = isPostOpen || isEditModalOpen;
+
+  const canEditTx = (tx: FinancialTransaction) =>
+    tx.status === "POSTED" && (tx.isManual !== false) && !tx.visitId;
+
+  const openEditTx = (tx: FinancialTransaction) => {
+    if (!canEditTx(tx)) return;
+    setPostError(null);
+    setEditingTx(tx);
+    setTxType(tx.type);
+    setCategoryId(tx.categoryId || "");
+    setEditAmount(String(tx.amountEGP));
+    setEditDescription(tx.description || "");
+    setEditDate(tx.date);
+    setIsPostOpen(false);
+  };
+
+  const closeTxForm = () => {
+    setIsPostOpen(false);
+    setEditingTx(null);
+    setPostError(null);
+    setIsSaving(false);
+  };
+
+  const sortedTransactions = useMemo(() => {
+    if (!sort) return transactions;
+    const dir = sort.dir === "asc" ? 1 : -1;
+    return [...transactions].sort((a, b) => {
+      if (sort.id === "amount") return (a.amountEGP - b.amountEGP) * dir;
+      if (sort.id === "date") return String(a.date).localeCompare(String(b.date)) * dir;
+      if (sort.id === "ref") return a.id.localeCompare(b.id) * dir;
+      if (sort.id === "category") return String(a.category).localeCompare(String(b.category)) * dir;
+      return 0;
+    });
+  }, [transactions, sort]);
+
+  const ledgerColumns: DataColumn<FinancialTransaction>[] = [
+    {
+      id: "ref",
+      header: isAr ? "رقم القيد" : "Ref",
+      sortable: true,
+      minWidth: 96,
+      cardRole: "id",
+      cardLabel: isAr ? "رقم القيد" : "Entry ID",
+      truncate: false,
+      cell: (tx) => (
+        <span className="font-mono font-medium text-[var(--gold-primary)]">
+          {dash(tx.id.slice(0, 8).toUpperCase())}
+        </span>
+      ),
+    },
+    {
+      id: "date",
+      header: dict.financials.table.date,
+      sortable: true,
+      numeric: true,
+      cardRole: "meta",
+      cardLabel: isAr ? "بتاريخ" : "Posted",
+      cell: (tx) => dash(tx.date),
+    },
+    {
+      id: "category",
+      header: dict.financials.table.category,
+      sortable: true,
+      truncate: false,
+      cardRole: "detail",
+      cardLabel: isAr ? "الفئة" : "Category",
+      cell: (tx) =>
+        tx.category ? (
+          <Badge variant={tx.type === "REVENUE" ? "green" : "blue"} size="sm">
+            {tx.category}
+          </Badge>
+        ) : (
+          "–"
+        ),
+    },
+    {
+      id: "description",
+      header: dict.financials.table.description,
+      minWidth: 180,
+      cardRole: "detail",
+      cardLabel: isAr ? "البيان" : "Notes",
+      cell: (tx) => <TableText className="text-secondary">{dash(tx.description)}</TableText>,
+      truncate: false,
+    },
+    {
+      id: "party",
+      header: dict.financials.table.patientDoctor,
+      pin: true,
+      cardRole: "identity",
+      truncate: false,
+      cardCell: (tx) =>
+        dash(tx.patientName) !== "–"
+          ? tx.patientName
+          : isAr
+            ? "مصروفات عامة"
+            : "General clinic",
+      cell: (tx) =>
+        tx.patientName ? (
+          <div className="min-w-0 max-w-[12rem]">
+            <TableText className="font-semibold text-primary">{tx.patientName}</TableText>
+            <TableText className="text-[10px] text-muted">{dash(tx.doctorName)}</TableText>
+          </div>
+        ) : (
+          <span className="text-muted">{isAr ? "مصروفات عامة" : "General clinic"}</span>
+        ),
+    },
+    {
+      id: "amount",
+      header: dict.financials.table.amount,
+      sortable: true,
+      numeric: true,
+      cardRole: "value",
+      cell: (tx) => (
+        <TableAmount
+          value={tx.type === "EXPENSE" ? -Math.abs(tx.amountEGP) : tx.amountEGP}
+          currency={currency}
+          signed="auto"
+          className="font-semibold"
+        />
+      ),
+    },
+    {
+      id: "status",
+      header: dict.financials.table.status,
+      align: "end",
+      cardRole: "state",
+      cell: (tx) =>
+        tx.status ? (
+          <Badge variant={tx.type === "REVENUE" ? "green" : "neutral"} size="sm">
+            {tx.status}
+          </Badge>
+        ) : (
+          "–"
+        ),
+      truncate: false,
+    },
+    {
+      id: "actions",
+      header: dict.common.actions,
+      actions: true,
+      cardRole: "actions",
+      truncate: false,
+      cell: (tx) =>
+        canEditTx(tx) ? (
+          <TableActions
+            items={[
+              {
+                id: "edit",
+                label: dict.financials.table.edit,
+                tone: "accent",
+                onClick: () => openEditTx(tx),
+              },
+            ]}
+          />
+        ) : (
+          <span className="text-[10px] text-muted" title={dict.financials.editLockedHint}>
+            –
+          </span>
+        ),
+    },
+  ];
+
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [txData, catData, outstandingData] = await Promise.all([
+      const [txData, catData, outstandingData, summaryData] = await Promise.all([
         fetchFinancialTransactions(),
         fetchFinancialCategories(),
         fetchOutstandingVisits(),
+        fetchFinancialSummary(),
       ]);
       setTransactions(txData);
       setCategories(catData);
       setOutstanding(outstandingData);
+      setSummary(summaryData);
     } finally {
       setIsLoading(false);
     }
@@ -73,22 +274,32 @@ export default function FinancialsPage() {
   }, []);
 
   useEffect(() => {
-    if (!isPostOpen) return;
-    const first = filteredCategories[0];
-    setCategoryId(first?.id || "");
-  }, [isPostOpen, filteredCategories]);
+    if (!isTxFormOpen) return;
+    const stillValid = filteredCategories.some((c) => c.id === categoryId);
+    if (stillValid) return;
+    const preferred =
+      (editingTx?.categoryId &&
+        filteredCategories.find((c) => c.id === editingTx.categoryId)?.id) ||
+      filteredCategories[0]?.id ||
+      "";
+    setCategoryId(preferred);
+  }, [isTxFormOpen, filteredCategories, categoryId, editingTx]);
 
-  const totalRevenue = transactions
+  const totalRevenue = summary?.grossCollectedEGP ?? transactions
     .filter((t) => t.type === "REVENUE")
     .reduce((sum, t) => sum + t.amountEGP, 0);
 
-  const totalExpense = transactions
+  const totalExpense = summary?.totalExpensesEGP ?? transactions
     .filter((t) => t.type === "EXPENSE")
     .reduce((sum, t) => sum + t.amountEGP, 0);
 
-  const revenueCount = transactions.filter((t) => t.type === "REVENUE").length;
-  const avgCase = revenueCount > 0 ? Math.round(totalRevenue / revenueCount) : 0;
-  const netProfit = totalRevenue - totalExpense;
+  const doctorShare = summary?.doctorShareEGP ?? 0;
+  const assistantShare = summary?.assistantShareEGP ?? 0;
+  const referralShare = summary?.referralShareEGP ?? 0;
+  const caseCosts = summary?.caseCostsEGP ?? 0;
+  const clinicShare = summary?.clinicShareEGP ?? totalRevenue;
+  const avgCase = summary?.avgCaseEGP ?? 0;
+  const netProfit = summary?.netClinicProfitEGP ?? clinicShare - totalExpense;
   const totalOutstanding = outstanding.reduce((sum, v) => sum + visitMoney(v).remaining, 0);
 
   const categoryLabel = (cat: FinancialCategory) =>
@@ -122,17 +333,22 @@ export default function FinancialsPage() {
           title={dict.financials.title}
           subtitle={dict.financials.subtitle}
           actions={
-            <button
+            <Button
               type="button"
+              variant="primary"
+              size="sm"
               onClick={() => {
                 setPostError(null);
+                setEditingTx(null);
                 setTxType("EXPENSE");
+                setEditAmount("");
+                setEditDescription("");
+                setEditDate("");
                 setIsPostOpen(true);
               }}
-              className="btn-gold"
             >
               + {dict.financials.postTransaction}
-            </button>
+            </Button>
           }
         />
 
@@ -143,6 +359,14 @@ export default function FinancialsPage() {
               +{totalRevenue.toLocaleString()} {currency}
             </div>
             <span className="text-[10px] text-emerald-500/80">{isAr ? "مقبوضات مسجلة" : "Collections recorded"}</span>
+          </div>
+
+          <div className="glass-card rounded-2xl p-5 space-y-1">
+            <span className="text-xs font-semibold text-secondary">{dict.financials.stats.clinicShare}</span>
+            <div className="font-mono text-xl font-bold text-primary">
+              {clinicShare.toLocaleString()} {currency}
+            </div>
+            <span className="text-[10px] text-muted">{isAr ? "بعد تكاليف الحالة ونسب الفريق" : "After case costs & team cuts"}</span>
           </div>
 
           <div className="glass-card rounded-2xl p-5 space-y-1">
@@ -158,17 +382,43 @@ export default function FinancialsPage() {
             <div className="font-mono text-xl font-bold text-gold-light">
               {netProfit.toLocaleString()} {currency}
             </div>
-            <span className="text-[10px] text-gold/80">{isAr ? "هامش الفترة الحالية" : "Current period margin"}</span>
-          </div>
-
-          <div className="glass-card rounded-2xl p-5 space-y-1">
-            <span className="text-xs font-semibold text-secondary">{dict.financials.stats.avgCase}</span>
-            <div className="font-mono text-xl font-bold text-primary">
-              {avgCase.toLocaleString()} {currency}
-            </div>
-            <span className="text-[10px] text-muted">{isAr ? "لكل زيارة علاجية" : "Per treatment visit"}</span>
+            <span className="text-[10px] text-gold/80">{isAr ? "حصة العيادة − المصروفات" : "Clinic share − expenses"}</span>
           </div>
         </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="glass-card rounded-2xl p-4 space-y-1">
+            <span className="text-[11px] font-semibold text-secondary">{dict.financials.stats.caseCosts}</span>
+            <div className="font-mono text-lg font-bold text-rose-500">
+              {caseCosts.toLocaleString()} {currency}
+            </div>
+          </div>
+          <div className="glass-card rounded-2xl p-4 space-y-1">
+            <span className="text-[11px] font-semibold text-secondary">{dict.financials.stats.doctorShare}</span>
+            <div className="font-mono text-lg font-bold text-primary">
+              {doctorShare.toLocaleString()} {currency}
+            </div>
+          </div>
+          <div className="glass-card rounded-2xl p-4 space-y-1">
+            <span className="text-[11px] font-semibold text-secondary">{dict.financials.stats.assistantShare}</span>
+            <div className="font-mono text-lg font-bold text-primary">
+              {assistantShare.toLocaleString()} {currency}
+            </div>
+          </div>
+          <div className="glass-card rounded-2xl p-4 space-y-1">
+            <span className="text-[11px] font-semibold text-secondary">{dict.financials.stats.referralShare}</span>
+            <div className="font-mono text-lg font-bold text-primary">
+              {referralShare.toLocaleString()} {currency}
+            </div>
+          </div>
+          <div className="glass-card rounded-2xl p-4 space-y-1">
+            <span className="text-[11px] font-semibold text-secondary">{dict.financials.stats.avgCase}</span>
+            <div className="font-mono text-lg font-bold text-primary">
+              {avgCase.toLocaleString()} {currency}
+            </div>
+          </div>
+        </div>
+        <p className="text-[11px] text-muted -mt-2">{dict.financials.splitHelp}</p>
 
         <div className="glass-card rounded-2xl p-4 sm:p-5 space-y-3">
           <div className="flex items-center justify-between gap-3">
@@ -235,38 +485,41 @@ export default function FinancialsPage() {
                           placeholder={dict.financials.paymentAmount}
                           className="w-full sm:w-40 glass rounded-xl px-3 py-2 text-xs font-mono focus:border-[#caa95a] focus:outline-none"
                         />
-                        <button
+                        <Button
                           type="button"
+                          variant="primary"
+                          size="xs"
                           disabled={isPaying}
                           onClick={() => void handleRecordPayment(visit)}
-                          className="rounded-xl bg-gradient-to-r from-[#dfbf70] via-[#caa95a] to-[#99782a] px-3 py-2 text-[11px] font-semibold text-on-gold"
                         >
                           {dict.financials.confirmPayment}
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                           type="button"
+                          variant="ghost"
+                          size="xs"
                           onClick={() => {
                             setPayingVisitId(null);
                             setPaymentAmount("");
                             setPaymentError(null);
                           }}
-                          className="glass rounded-xl px-3 py-2 text-[11px] text-secondary"
                         >
                           {dict.patientProfile.cancel}
-                        </button>
+                        </Button>
                       </div>
                     ) : (
-                      <button
+                      <Button
                         type="button"
+                        variant="danger-soft"
+                        size="xs"
                         onClick={() => {
                           setPayingVisitId(visit.id);
                           setPaymentAmount(String(money.remaining));
                           setPaymentError(null);
                         }}
-                        className="rounded-xl border border-rose-400/40 bg-white px-3 py-1.5 text-[11px] font-semibold text-rose-700"
                       >
                         {dict.financials.recordPayment}
-                      </button>
+                      </Button>
                     )}
                     {payingVisitId === visit.id && paymentError && (
                       <p className="text-[11px] text-rose-600">{paymentError}</p>
@@ -278,136 +531,70 @@ export default function FinancialsPage() {
           )}
         </div>
 
-        <div className="glass-card rounded-2xl overflow-hidden">
-          <div className="p-4 border-b glass-divider flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-primary">
-              {dict.financials.transactionRegister}
-            </h3>
-            <span className="text-xs text-secondary font-mono">
-              {transactions.length} {isAr ? "حركات مسجلة" : "entries posted"}
-            </span>
-          </div>
-
-          <div className="hidden md:block overflow-x-auto">
-            <table className="w-full text-left rtl:text-right text-xs">
-              <thead className="glass-table-header text-secondary">
-                <tr>
-                  <th className="px-4 py-3.5 font-medium">{isAr ? "رقم القيد" : "Ref"}</th>
-                  <th className="px-4 py-3.5 font-medium">{dict.financials.table.date}</th>
-                  <th className="px-4 py-3.5 font-medium">{dict.financials.table.category}</th>
-                  <th className="px-4 py-3.5 font-medium">{dict.financials.table.description}</th>
-                  <th className="px-4 py-3.5 font-medium">{dict.financials.table.patientDoctor}</th>
-                  <th className="px-4 py-3.5 font-medium">{dict.financials.table.amount}</th>
-                  <th className="px-4 py-3.5 font-medium text-end">{dict.financials.table.status}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200 text-primary">
-                {isLoading ? (
-                  <tr>
-                    <td colSpan={7} className="py-12 text-center text-xs text-secondary">
-                      {isAr ? "جاري تحميل الدفتر المالي..." : "Loading transactions..."}
-                    </td>
-                  </tr>
-                ) : transactions.length > 0 ? (
-                  transactions.map((tx) => (
-                    <tr key={tx.id} className="glass-hover transition-colors">
-                      <td className="px-4 py-3.5 font-mono text-gold">{tx.id.slice(0, 8).toUpperCase()}</td>
-                      <td className="px-4 py-3.5 text-secondary font-mono">{tx.date}</td>
-                      <td className="px-4 py-3.5">
-                        <Badge variant={tx.type === "REVENUE" ? "green" : "blue"} size="sm">
-                          {tx.category}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3.5 text-[#cbd5e1] max-w-xs truncate">{tx.description}</td>
-                      <td className="px-4 py-3.5">
-                        {tx.patientName ? (
-                          <div>
-                            <span className="font-semibold text-primary">{tx.patientName}</span>
-                            <span className="text-[10px] text-muted block">{tx.doctorName}</span>
-                          </div>
-                        ) : (
-                          <span className="text-muted">{isAr ? "مصروفات عامة" : "General Clinic"}</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3.5 font-mono font-bold">
-                        <span className={tx.type === "REVENUE" ? "text-emerald-400" : "text-rose-400"}>
-                          {tx.type === "REVENUE" ? "+" : "-"}
-                          {tx.amountEGP.toLocaleString()} {currency}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3.5 text-end">
-                        <span className="text-[11px] text-muted">{tx.status}</span>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={7} className="py-12 text-center text-xs text-muted">
-                      {isAr ? "لا توجد معاملات مالية مسجلة حتى الآن." : "No financial ledger transactions posted yet."}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="md:hidden divide-y divide-slate-200 p-3 space-y-3">
-            {isLoading ? (
-              <div className="py-12 text-center text-xs text-secondary">
-                {isAr ? "جاري تحميل الدفتر المالي..." : "Loading transactions..."}
+        <DataTable
+            columns={ledgerColumns}
+            rows={sortedTransactions}
+            getRowId={(tx) => tx.id}
+            density={density}
+            onDensityChange={setDensity}
+            densityLabels={{
+              compact: dict.common.densityCompact,
+              default: dict.common.densityDefault,
+              comfortable: dict.common.densityComfortable,
+            }}
+            sort={sort}
+            onSortChange={setSort}
+            sortControlLabel={dict.common.sort}
+            loading={isLoading}
+            loadingMessage={dict.common.loading}
+            emptyMessage={
+              isAr ? "لا توجد معاملات مالية مسجلة حتى الآن." : "No financial ledger transactions posted yet."
+            }
+            sheetTitle={(tx) =>
+              tx.patientName || (isAr ? "مصروفات عامة" : "General clinic")
+            }
+            sheetDescription={(tx) => tx.id.slice(0, 8).toUpperCase()}
+            toolbar={
+              <div className="flex items-center gap-3 min-w-0">
+                <h3 className="text-sm font-semibold text-primary truncate">
+                  {dict.financials.transactionRegister}
+                </h3>
+                <span className="text-[11px] text-muted tabular-nums shrink-0">
+                  {transactions.length} {isAr ? "حركات" : "entries"}
+                </span>
               </div>
-            ) : transactions.length > 0 ? (
-              transactions.map((tx) => (
-                <div key={tx.id} className="pt-3 first:pt-0 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Badge variant={tx.type === "REVENUE" ? "green" : "blue"} size="sm">
-                        {tx.category}
-                      </Badge>
-                      <span className="font-mono text-[10px] text-gold">{tx.id.slice(0, 8).toUpperCase()}</span>
-                    </div>
-                    <span className="font-mono text-xs font-bold">
-                      <span className={tx.type === "REVENUE" ? "text-emerald-400" : "text-rose-400"}>
-                        {tx.type === "REVENUE" ? "+" : "-"}
-                        {tx.amountEGP.toLocaleString()} {currency}
-                      </span>
-                    </span>
-                  </div>
-                  <p className="text-xs text-[#cbd5e1] font-medium">{tx.description}</p>
-                  <div className="flex items-center justify-between text-[11px] text-secondary pt-1">
-                    <span>
-                      {tx.patientName
-                        ? `${tx.patientName} (${tx.doctorName})`
-                        : isAr
-                          ? "مصروفات عامة"
-                          : "General Clinic"}
-                    </span>
-                    <span className="font-mono text-[10px] text-muted">{tx.date}</span>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="py-8 text-center text-xs text-muted">
-                {isAr ? "لا توجد معاملات مسجلة." : "No transactions posted yet."}
-              </div>
-            )}
-          </div>
-        </div>
+            }
+          />
       </div>
 
       <Modal
-        isOpen={isPostOpen}
-        onClose={() => setIsPostOpen(false)}
-        title={dict.financials.postTransaction}
-        description={isAr ? "تسجيل مقبوضات علاجية أو دفع مصروف حسب الفئة" : "Record collection or categorized clinic expense"}
+        isOpen={isTxFormOpen}
+        onClose={closeTxForm}
+        title={editingTx ? dict.financials.editTransaction : dict.financials.postTransaction}
+        description={
+          editingTx
+            ? isAr
+              ? "تعديل مبلغ أو فئة أو بيان القيد المالي"
+              : "Update amount, category, or description for this ledger entry"
+            : isAr
+              ? "تسجيل مقبوضات علاجية أو دفع مصروف حسب الفئة"
+              : "Record collection or categorized clinic expense"
+        }
       >
         <form
           onSubmit={async (e) => {
             e.preventDefault();
             setPostError(null);
             const formData = new FormData(e.currentTarget);
-            const amountEGP = parseInt((formData.get("amount") as string) || "0", 10);
-            const description = (formData.get("description") as string) || "";
+            const amountEGP = parseInt(
+              editingTx
+                ? editAmount
+                : ((formData.get("amount") as string) || "0"),
+              10
+            );
+            const description = editingTx
+              ? editDescription
+              : ((formData.get("description") as string) || "");
             const selected = filteredCategories.find((c) => c.id === categoryId);
 
             if (!selected) {
@@ -415,8 +602,23 @@ export default function FinancialsPage() {
               return;
             }
 
-            if (amountEGP > 0) {
-              try {
+            if (!(amountEGP > 0)) {
+              setPostError(isAr ? "أدخل مبلغاً صالحاً أكبر من صفر." : "Enter a valid amount greater than zero.");
+              return;
+            }
+
+            setIsSaving(true);
+            try {
+              if (editingTx) {
+                await updateFinancialTransaction(editingTx.id, {
+                  type: txType,
+                  amountEGP,
+                  description,
+                  categoryId: selected.id,
+                  categoryName: selected.nameEn,
+                  effectiveOn: editDate || editingTx.date,
+                });
+              } else {
                 await postFinancialTransaction({
                   type: txType,
                   amountEGP,
@@ -424,15 +626,21 @@ export default function FinancialsPage() {
                   categoryId: selected.id,
                   categoryName: selected.nameEn,
                 });
-                await loadData();
-                setIsPostOpen(false);
-              } catch {
-                setPostError(
-                  isAr
+              }
+              await loadData();
+              closeTxForm();
+            } catch {
+              setPostError(
+                editingTx
+                  ? isAr
+                    ? "تعذر حفظ التعديلات. تحقق من الفئة وحاول مجددًا."
+                    : "Could not save changes. Check the category and try again."
+                  : isAr
                     ? "تعذر ترحيل الحركة. تحقق من الفئة وحاول مجددًا."
                     : "Could not post transaction. Check the category and try again."
-                );
-              }
+              );
+            } finally {
+              setIsSaving(false);
             }
           }}
           className="space-y-4 text-xs"
@@ -452,7 +660,29 @@ export default function FinancialsPage() {
             </select>
           </div>
 
-          <Input name="amount" label={isAr ? "المبلغ (ج.م)" : "Amount (EGP)"} type="number" placeholder="e.g. 1500" required />
+          {editingTx ? (
+            <>
+              <Input
+                name="amount"
+                label={isAr ? "المبلغ (ج.م)" : "Amount (EGP)"}
+                type="number"
+                min={1}
+                value={editAmount}
+                onChange={(e) => setEditAmount(e.target.value)}
+                required
+              />
+              <Input
+                name="effectiveOn"
+                label={isAr ? "التاريخ الفعلي" : "Effective date"}
+                type="date"
+                value={editDate}
+                onChange={(e) => setEditDate(e.target.value)}
+                required
+              />
+            </>
+          ) : (
+            <Input name="amount" label={isAr ? "المبلغ (ج.م)" : "Amount (EGP)"} type="number" placeholder="e.g. 1500" required />
+          )}
 
           <div>
             <label className="block text-xs font-medium text-secondary mb-1">
@@ -477,12 +707,22 @@ export default function FinancialsPage() {
             </select>
           </div>
 
-          <Input
-            name="description"
-            label={isAr ? "البيان / الوصف" : "Description"}
-            placeholder={isAr ? "مثل: حملة فيسبوك أو شراء مواد حشو" : "e.g. Facebook campaign or composite materials"}
-            required
-          />
+          {editingTx ? (
+            <Input
+              name="description"
+              label={isAr ? "البيان / الوصف" : "Description"}
+              value={editDescription}
+              onChange={(e) => setEditDescription(e.target.value)}
+              required
+            />
+          ) : (
+            <Input
+              name="description"
+              label={isAr ? "البيان / الوصف" : "Description"}
+              placeholder={isAr ? "مثل: حملة فيسبوك أو شراء مواد حشو" : "e.g. Facebook campaign or composite materials"}
+              required
+            />
+          )}
 
           {postError && (
             <div className="rounded-xl border border-rose-500/40 bg-rose-50 px-3 py-2 text-xs text-rose-700">
@@ -491,11 +731,15 @@ export default function FinancialsPage() {
           )}
 
           <div className="flex items-center justify-end gap-2 pt-3 border-t glass-divider/60">
-            <Button variant="outline" size="sm" type="button" onClick={() => setIsPostOpen(false)}>
+            <Button variant="outline" size="sm" type="button" onClick={closeTxForm}>
               {dict.patientNew.cancelButton}
             </Button>
-            <Button variant="primary" size="sm" type="submit" disabled={!categoryId}>
-              {isAr ? "ترحيل إلى الدفتر" : "Post to Ledger"}
+            <Button variant="primary" size="sm" type="submit" disabled={!categoryId || isSaving}>
+              {editingTx
+                ? dict.financials.saveTransaction
+                : isAr
+                  ? "ترحيل إلى الدفتر"
+                  : "Post to Ledger"}
             </Button>
           </div>
         </form>

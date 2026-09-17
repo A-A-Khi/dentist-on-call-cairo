@@ -1,9 +1,11 @@
+import os
 import sys
 from uuid import uuid4
 
 from sqlalchemy import select
 
 from app.auth.security import hash_password
+from app.core.config import get_settings
 from app.database.session import get_session_factory
 from app.models.enums import DoctorStatus, TransactionType, UserRole
 from app.models.identity import DoctorProfile, Organization, User
@@ -12,6 +14,17 @@ from app.models.settings import SystemSetting
 
 
 def seed_database() -> None:
+    settings = get_settings()
+    admin_password = settings.seed_admin_password or os.environ.get("SEED_ADMIN_PASSWORD")
+    doctor_password = settings.seed_doctor_password or os.environ.get("SEED_DOCTOR_PASSWORD")
+    if not admin_password or not doctor_password:
+        raise RuntimeError(
+            "SEED_DEMO_DATA requires SEED_ADMIN_PASSWORD and SEED_DOCTOR_PASSWORD "
+            "(min 12 characters). Passwords are never logged."
+        )
+    if len(admin_password) < 12 or len(doctor_password) < 12:
+        raise RuntimeError("Seed passwords must be at least 12 characters.")
+
     session_factory = get_session_factory()
     with session_factory() as session:
         # 1. Organization
@@ -41,14 +54,14 @@ def seed_database() -> None:
                 id=uuid4(),
                 organization_id=org.id,
                 email=admin_email,
-                password_hash=hash_password("AdminSecurePass2026!"),
+                password_hash=hash_password(admin_password),
                 role=UserRole.ADMIN,
                 display_name="Clinic Administrator",
                 is_active=True,
             )
             session.add(admin)
             session.flush()
-            print(f"[Seed] Created Admin: {admin.email} (Password: AdminSecurePass2026!)")
+            print(f"[Seed] Created Admin: {admin.email}")
         else:
             print(f"[Seed] Existing Admin found: {admin.email}")
 
@@ -62,9 +75,9 @@ def seed_database() -> None:
                 id=uuid4(),
                 organization_id=org.id,
                 email=doctor_email,
-                password_hash=hash_password("DoctorSecurePass2026!"),
+                password_hash=hash_password(doctor_password),
                 role=UserRole.DOCTOR,
-                display_name="Dr. Tarek Omar",
+                display_name="Dr. Sayed El-Bahy",
                 is_active=True,
             )
             session.add(doctor_user)
@@ -81,9 +94,13 @@ def seed_database() -> None:
             )
             session.add(doctor_profile)
             session.flush()
-            print(f"[Seed] Created Doctor: {doctor_user.email} (Code: DOC-DR-001, Pass: DoctorSecurePass2026!)")
+            print(f"[Seed] Created Doctor: {doctor_user.email} (Code: DOC-DR-001)")
         else:
-            print(f"[Seed] Existing Doctor found: {doctor_user.email}")
+            if doctor_user.display_name != "Dr. Sayed El-Bahy":
+                doctor_user.display_name = "Dr. Sayed El-Bahy"
+                print(f"[Seed] Updated Doctor display name: {doctor_user.email} -> Dr. Sayed El-Bahy")
+            else:
+                print(f"[Seed] Existing Doctor found: {doctor_user.email}")
 
         # 4. Procedure Catalog
         procedures = [
@@ -167,8 +184,12 @@ def seed_database() -> None:
                         name_en=name_en,
                         name_ar=name_ar,
                         is_active=True,
+                        referral_percent=10 if name_en == "Partnership Clinics" else 0,
                     )
                 )
+            elif name_en == "Partnership Clinics" and stream.referral_percent == 0:
+                # Sensible default for partnership referrers if never configured.
+                stream.referral_percent = 10
         print("[Seed] Case streams verified.")
 
         # 6. Default Settings

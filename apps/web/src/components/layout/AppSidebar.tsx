@@ -90,7 +90,11 @@ export function AppSidebar({ locale, role, dict }: AppSidebarProps) {
         })}
       </div>
 
-      <div className="glass rounded-xl p-3 text-center">
+      <div className="glass rounded-xl p-3 text-center space-y-2">
+        <div className="mx-auto flex h-14 w-full max-w-[12rem] items-center justify-center overflow-hidden rounded-xl border border-[#caa95a]/30 bg-black px-1">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/logo.png" alt="" className="max-h-full w-full object-contain" />
+        </div>
         <p className="text-[11px] font-medium text-gold">Dentist on Call</p>
         <p className="text-[10px] text-muted mt-0.5">Cairo Season 2026</p>
       </div>

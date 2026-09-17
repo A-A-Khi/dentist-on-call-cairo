@@ -1,0 +1,384 @@
+"use client";
+
+import React, { useEffect, useState } from "react";
+import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
+import { AppShell } from "../../../../../../../components/layout/AppShell";
+import { PageHeader } from "../../../../../../../components/layout/PageHeader";
+import { Breadcrumb } from "../../../../../../../components/layout/Breadcrumb";
+import { Textarea } from "../../../../../../../components/ui/Textarea";
+import { Button, ButtonLink } from "../../../../../../../components/ui/Button";
+import { getDictionarySync } from "../../../../../../../i18n/get-dictionary";
+import {
+  fetchPatientById,
+  fetchVisitById,
+  updateClinicalVisit,
+} from "../../../../../../../lib/clinical-api";
+import { getStoredSessionUser } from "../../../../../../../lib/session";
+import type { Patient } from "../../../../../../../lib/clinical-data";
+
+interface ProcedureRow {
+  id: string;
+  name: string;
+  tooth: string;
+  cost: number;
+}
+
+function cleanText(value?: string | null) {
+  if (!value || value === "—") return "";
+  return value;
+}
+
+export default function EditVisitPage() {
+  const params = useParams();
+  const router = useRouter();
+  const locale = (params?.locale as string) || "en";
+  const dict = getDictionarySync(locale);
+  const isAr = locale === "ar";
+  const patientId = (params?.patientId as string) || "";
+  const visitId = (params?.visitId as string) || "";
+
+  const [patient, setPatient] = useState<Patient | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(true);
+  const [paidAmountEGP, setPaidAmountEGP] = useState(0);
+  const [caseCost, setCaseCost] = useState(0);
+  const [caseCostNote, setCaseCostNote] = useState("");
+
+  const [chiefComplaint, setChiefComplaint] = useState("");
+  const [clinicalFindings, setClinicalFindings] = useState("");
+  const [diagnosis, setDiagnosis] = useState("");
+  const [doctorNotes, setDoctorNotes] = useState("");
+  const [prescriptions, setPrescriptions] = useState("");
+  const [procedures, setProcedures] = useState<ProcedureRow[]>([]);
+
+  useEffect(() => {
+    const session = getStoredSessionUser();
+    setIsAdmin((session?.role ?? "ADMIN") === "ADMIN");
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      setIsLoading(true);
+      try {
+        const [p, visit] = await Promise.all([
+          fetchPatientById(patientId),
+          fetchVisitById(visitId),
+        ]);
+        if (cancelled) return;
+        setPatient(p);
+        if (visit) {
+          setChiefComplaint(cleanText(visit.chiefComplaint));
+          setClinicalFindings(cleanText(visit.clinicalFindings));
+          setDiagnosis(cleanText(visit.diagnosis));
+          setDoctorNotes(cleanText(visit.doctorNotes));
+          setPrescriptions(visit.prescriptions?.join("\n") || "");
+          setPaidAmountEGP(visit.paidAmountEGP ?? 0);
+          setCaseCost(visit.caseCostEGP ?? 0);
+          setCaseCostNote(visit.caseCostNote || "");
+          setProcedures(
+            visit.procedures.map((proc) => ({
+              id: proc.id,
+              name: proc.name,
+              tooth: proc.toothNumber || "",
+              cost: proc.costEGP || 0,
+            }))
+          );
+        }
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    }
+    if (patientId && visitId) void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [patientId, visitId]);
+
+  const totalCost = procedures.reduce((sum, p) => sum + p.cost, 0);
+  const remaining = Math.max(totalCost - paidAmountEGP, 0);
+
+  const addProcedure = () => {
+    setProcedures((prev) => [
+      ...prev,
+      {
+        id: `proc-${Date.now()}`,
+        name: isAr ? "إجراء سريري" : "Clinical Procedure",
+        tooth: "",
+        cost: 0,
+      },
+    ]);
+  };
+
+  const updateProcedure = (id: string, updates: Partial<ProcedureRow>) => {
+    setProcedures((prev) => prev.map((p) => (p.id === id ? { ...p, ...updates } : p)));
+  };
+
+  const removeProcedure = (id: string) => {
+    setProcedures((prev) => prev.filter((p) => p.id !== id));
+  };
+
+  const handleSave = async () => {
+    if (!patient || !isAdmin) return;
+    if (totalCost < paidAmountEGP) {
+      setError(
+        isAr
+          ? `لا يمكن أن يكون الإجمالي أقل من المدفوع (${paidAmountEGP} ج.م)`
+          : `Total cannot be less than amount already paid (${paidAmountEGP} EGP)`
+      );
+      return;
+    }
+    setIsSaving(true);
+    setError(null);
+    try {
+      await updateClinicalVisit(visitId, {
+        chiefComplaint: chiefComplaint.trim(),
+        clinicalFindings: clinicalFindings.trim(),
+        diagnosis: diagnosis.trim(),
+        doctorNotes,
+        prescriptions,
+        procedures: procedures.map((p) => ({
+          name: p.name,
+          toothNumber: p.tooth || undefined,
+          costEGP: p.cost,
+        })),
+        caseCostEGP: Math.max(0, caseCost),
+        caseCostNote: caseCostNote.trim() || null,
+        status: "Completed",
+      });
+      router.push(`/${locale}/patients/${patient.code}`);
+    } catch {
+      setError(isAr ? "تعذر حفظ تعديلات الزيارة." : "Could not save visit changes.");
+      setIsSaving(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <AppShell locale={locale}>
+        <div className="py-16 text-center text-xs text-secondary">
+          {isAr ? "جاري تحميل الزيارة..." : "Loading visit..."}
+        </div>
+      </AppShell>
+    );
+  }
+
+  if (!patient) {
+    return (
+      <AppShell locale={locale}>
+        <div className="glass-card rounded-2xl border-dashed p-12 text-center space-y-3">
+          <p className="text-sm font-semibold text-primary">{dict.patientProfile.notFound}</p>
+          <ButtonLink href={`/${locale}/patients`} variant="primary" size="sm" className="mt-2">
+            {dict.nav.patients}
+          </ButtonLink>
+        </div>
+      </AppShell>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <AppShell locale={locale}>
+        <div className="glass-card rounded-2xl border-dashed p-12 text-center space-y-3">
+          <p className="text-sm font-semibold text-primary">
+            {isAr ? "تعديل الزيارات متاح للإدارة فقط" : "Only administrators can edit visits"}
+          </p>
+          <ButtonLink href={`/${locale}/patients/${patient.code}`} variant="primary" size="sm" className="mt-2">
+            {isAr ? "العودة للملف" : "Back to chart"}
+          </ButtonLink>
+        </div>
+      </AppShell>
+    );
+  }
+
+  return (
+    <AppShell locale={locale}>
+      <div className="max-w-4xl mx-auto space-y-6 pb-24">
+        <PageHeader
+          breadcrumb={
+            <Breadcrumb
+              items={[
+                { label: dict.nav.patients, href: `/${locale}/patients` },
+                { label: patient.code, href: `/${locale}/patients/${patient.code}` },
+                { label: dict.visitEdit.title },
+              ]}
+            />
+          }
+          title={dict.visitEdit.title}
+          subtitle={`${patient.fullName} • ${dict.visitEdit.paidLocked}: ${paidAmountEGP.toLocaleString()} ${dict.patientProfile.currency}`}
+        />
+
+        <div className="glass-card rounded-2xl p-5 sm:p-6 space-y-3">
+          <h3 className="text-sm font-semibold text-primary">{dict.visitNew.chiefComplaint}</h3>
+          <Textarea value={chiefComplaint} onChange={(e) => setChiefComplaint(e.target.value)} rows={2} />
+        </div>
+
+        <div className="glass-card rounded-2xl p-5 sm:p-6 space-y-4">
+          <h3 className="text-sm font-semibold text-primary">
+            {isAr ? "الفحص والتشخيص" : "Examination & Diagnosis"}
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Textarea
+              label={dict.visitNew.clinicalFindings}
+              value={clinicalFindings}
+              onChange={(e) => setClinicalFindings(e.target.value)}
+              rows={3}
+            />
+            <Textarea
+              label={dict.visitNew.diagnosis}
+              value={diagnosis}
+              onChange={(e) => setDiagnosis(e.target.value)}
+              rows={3}
+            />
+          </div>
+        </div>
+
+        <div className="glass-card rounded-2xl p-5 sm:p-6 space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="text-sm font-semibold text-primary">{dict.visitNew.proceduresTitle}</h3>
+            <Button type="button" variant="secondary" size="xs" onClick={addProcedure}>
+              {dict.visitNew.addProcedure}
+            </Button>
+          </div>
+
+          {procedures.length === 0 ? (
+            <p className="text-xs text-muted">{dict.visitEdit.noProcedures}</p>
+          ) : (
+            <div className="space-y-3">
+              {procedures.map((p) => (
+                <div key={p.id} className="glass rounded-xl p-3.5 space-y-3">
+                  <div className="flex justify-end">
+                    <Button
+                      type="button"
+                      variant="danger-soft"
+                      size="xs"
+                      onClick={() => removeProcedure(p.id)}
+                    >
+                      {isAr ? "حذف" : "Remove"}
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                    <div className="sm:col-span-6">
+                      <label className="block text-[10px] text-muted mb-1">{dict.visitNew.procedureName}</label>
+                      <input
+                        value={p.name}
+                        onChange={(e) => updateProcedure(p.id, { name: e.target.value })}
+                        className="w-full rounded-lg glass px-3 py-1.5 text-xs text-primary focus:border-[#caa95a] focus:outline-none"
+                      />
+                    </div>
+                    <div className="sm:col-span-3">
+                      <label className="block text-[10px] text-muted mb-1">{dict.visitNew.toothNumber}</label>
+                      <input
+                        value={p.tooth}
+                        onChange={(e) => updateProcedure(p.id, { tooth: e.target.value })}
+                        className="w-full rounded-lg glass px-3 py-1.5 text-xs font-mono text-primary focus:border-[#caa95a] focus:outline-none"
+                      />
+                    </div>
+                    <div className="sm:col-span-3">
+                      <label className="block text-[10px] text-muted mb-1">{dict.visitNew.costEGP}</label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={p.cost}
+                        onChange={(e) => updateProcedure(p.id, { cost: Number(e.target.value) || 0 })}
+                        className="w-full rounded-lg glass px-3 py-1.5 text-xs font-mono font-bold text-primary focus:border-[#caa95a] focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] pt-2 border-t glass-divider/60">
+            <div>
+              <span className="text-muted block">{dict.patientProfile.totalCost}</span>
+              <span className="font-mono font-bold text-primary">
+                {totalCost.toLocaleString()} {dict.patientProfile.currency}
+              </span>
+            </div>
+            <div>
+              <span className="text-muted block">{dict.patientProfile.amountPaid}</span>
+              <span className="font-mono font-bold text-emerald-600">
+                {paidAmountEGP.toLocaleString()} {dict.patientProfile.currency}
+              </span>
+            </div>
+            <div>
+              <span className="text-muted block">{dict.patientProfile.remainingBalance}</span>
+              <span className={`font-mono font-bold ${remaining > 0 ? "text-rose-500" : "text-emerald-600"}`}>
+                {remaining.toLocaleString()} {dict.patientProfile.currency}
+              </span>
+            </div>
+            <div>
+              <span className="text-muted block">{dict.visitNew.caseCosts}</span>
+              <span className="font-mono font-bold text-primary">
+                {Math.max(0, caseCost).toLocaleString()} {dict.patientProfile.currency}
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[11px] font-semibold text-secondary mb-1">
+                {dict.visitNew.caseCosts}
+              </label>
+              <input
+                type="number"
+                min={0}
+                step={50}
+                value={caseCost}
+                onChange={(e) => setCaseCost(Number(e.target.value) || 0)}
+                className="w-full rounded-lg glass px-3 py-2 text-sm text-primary font-mono font-bold focus:border-[#caa95a] focus:outline-none"
+              />
+              <p className="mt-1 text-[10px] text-muted">{dict.visitNew.caseCostsHint}</p>
+            </div>
+            <div>
+              <label className="block text-[11px] font-semibold text-secondary mb-1">
+                {dict.visitNew.caseCostsNote}
+              </label>
+              <input
+                type="text"
+                value={caseCostNote}
+                onChange={(e) => setCaseCostNote(e.target.value)}
+                placeholder={dict.visitNew.caseCostsNotePlaceholder}
+                className="w-full rounded-lg glass px-3 py-2 text-sm text-primary focus:border-[#caa95a] focus:outline-none"
+              />
+            </div>
+          </div>
+          <p className="text-[11px] text-muted">{dict.visitEdit.paymentNote}</p>
+        </div>
+
+        <div className="glass-card rounded-2xl p-5 sm:p-6 space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Textarea
+              label={dict.visitNew.prescriptions}
+              value={prescriptions}
+              onChange={(e) => setPrescriptions(e.target.value)}
+              rows={3}
+            />
+            <Textarea
+              label={dict.visitNew.doctorNotes}
+              value={doctorNotes}
+              onChange={(e) => setDoctorNotes(e.target.value)}
+              rows={3}
+            />
+          </div>
+        </div>
+
+        {error && <p className="text-xs text-rose-600">{error}</p>}
+
+        <div className="flex items-center justify-end gap-3">
+          <ButtonLink href={`/${locale}/patients/${patient.code}`} variant="secondary" size="sm">
+            {dict.visitEdit.cancelButton}
+          </ButtonLink>
+          <Button variant="primary" size="sm" onClick={() => void handleSave()} isLoading={isSaving}>
+            {dict.visitEdit.saveButton}
+          </Button>
+        </div>
+      </div>
+    </AppShell>
+  );
+}

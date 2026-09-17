@@ -13,6 +13,12 @@ class AuthenticatedUserResponse(BaseModel):
     display_name: str
     role: str
     access_token: str | None = None
+    refresh_token: str | None = None
+    csrf_token: str | None = None
+
+
+class RefreshRequest(BaseModel):
+    refresh_token: str | None = None
 
 
 class PasswordResetRequest(BaseModel):

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect } from "react";
+import { createPortal } from "react-dom";
 
 export interface ModalProps {
   isOpen: boolean;
@@ -33,7 +34,7 @@ export function Modal({
     };
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
+  if (!isOpen || typeof document === "undefined") return null;
 
   const sizeStyles = {
     sm: "max-w-sm",
@@ -42,17 +43,16 @@ export function Modal({
     xl: "max-w-4xl",
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
+  return createPortal(
+    <div className="fixed inset-0 z-[80] flex items-center justify-center p-4" role="dialog" aria-modal="true">
       <div
         className="fixed inset-0 bg-slate-900/30 backdrop-blur-sm transition-opacity"
         onClick={onClose}
+        aria-hidden
       />
 
-      {/* Dialog */}
       <div
-        className={`glass-popover relative z-10 w-full ${sizeStyles[size]} rounded-2xl p-6 transition-all`}
+        className={`glass-popover relative z-10 w-full ${sizeStyles[size]} max-h-[min(90vh,40rem)] overflow-y-auto rounded-2xl p-6 transition-all`}
       >
         <div className="flex items-start justify-between pb-4 border-b glass-divider">
           <div>
@@ -63,6 +63,7 @@ export function Modal({
             type="button"
             onClick={onClose}
             className="rounded-lg p-1.5 text-muted glass-hover hover:text-primary transition-colors"
+            aria-label="Close"
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
@@ -72,6 +73,7 @@ export function Modal({
 
         <div className="mt-4">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -2,22 +2,34 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { AppShell } from "../../../components/layout/AppShell";
 import { PageHeader } from "../../../components/layout/PageHeader";
 import { Badge } from "../../../components/ui/Badge";
+import { ButtonLink } from "../../../components/ui/Button";
 import { EmptyState } from "../../../components/ui/EmptyState";
+import { SkeletonCard } from "../../../components/ui/Skeleton";
 import { fetchDoctors } from "../../../lib/clinical-api";
 import { getDictionarySync } from "../../../i18n/get-dictionary";
 import type { Doctor } from "../../../lib/clinical-data";
+import { getStoredSessionUser } from "../../../lib/session";
+import { getDashboardHref } from "../../../components/layout/nav-config";
 
 export default function DoctorsPage() {
   const params = useParams();
+  const router = useRouter();
   const locale = (params?.locale as string) || "en";
   const dict = getDictionarySync(locale);
 
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const role = getStoredSessionUser()?.role ?? "DOCTOR";
+    if (role !== "ADMIN") {
+      router.replace(getDashboardHref(locale, "DOCTOR"));
+    }
+  }, [locale, router]);
 
   useEffect(() => {
     async function load() {
@@ -40,14 +52,17 @@ export default function DoctorsPage() {
         {/* Doctors Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {isLoading ? (
-            <div className="col-span-2 py-12 text-center text-xs text-secondary">
-              {locale === "ar" ? "جاري تحميل قائمة الأطباء..." : "Loading doctor roster..."}
-            </div>
+            <>
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+            </>
           ) : doctors.length > 0 ? (
             doctors.map((doc) => (
               <div
                 key={doc.id}
-                className="glass-card rounded-2xl p-5 space-y-4 shadow-md"
+                className="glass-card rounded-2xl p-5 space-y-4 animate-fade-in-up"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
@@ -84,12 +99,9 @@ export default function DoctorsPage() {
                 </div>
 
                 <div className="flex items-center justify-between pt-1 text-xs">
-                  <Link
-                    href={`/${locale}/calendar`}
-                    className="text-xs font-semibold text-gold hover:underline"
-                  >
+                  <ButtonLink href={`/${locale}/calendar`} variant="accent" size="xs">
                     {locale === "ar" ? "عرض الجدول الميداني" : "View Schedule"} →
-                  </Link>
+                  </ButtonLink>
                 </div>
               </div>
             ))

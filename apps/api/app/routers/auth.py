@@ -12,6 +12,7 @@ from app.auth.schemas import (
     LoginRequest,
     PasswordResetConfirmRequest,
     PasswordResetRequest,
+    RefreshRequest,
 )
 from app.auth.security import issue_access_token, new_csrf_token
 from app.auth.service import (
@@ -19,7 +20,9 @@ from app.auth.service import (
     create_password_reset_token,
     create_refresh_session,
     login_is_rate_limited,
+    password_reset_is_rate_limited,
     record_login_attempt,
+    record_password_reset_attempt,
     reset_password_with_token,
     revoke_session,
     rotate_refresh_session,
@@ -144,7 +147,8 @@ def login(
         email=user.email,
         display_name=user.display_name,
         role=user.role.value,
-        access_token=access_token,
+        # Tokens live in HttpOnly cookies only — never echo secrets to JS.
+        csrf_token=csrf_token,
     )
 
 
@@ -153,13 +157,16 @@ def refresh(
     request: Request,
     response: Response,
     session: DatabaseSession,
+    payload: RefreshRequest | None = None,
 ) -> AuthenticatedUserResponse:
     settings = get_settings()
-    raw_refresh_token = request.cookies.get(settings.refresh_cookie_name)
-    if raw_refresh_token is None:
+    raw_refresh_token = (payload.refresh_token if payload else None) or request.cookies.get(
+        settings.refresh_cookie_name
+    )
+    if not raw_refresh_token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Refresh token cookie is missing.",
+            detail="Refresh token is missing.",
         )
 
     result = rotate_refresh_session(session, raw_token=raw_refresh_token)
@@ -195,7 +202,7 @@ def refresh(
         email=user.email,
         display_name=user.display_name,
         role=user.role.value,
-        access_token=access_token,
+        csrf_token=csrf_token,
     )
 
 
@@ -213,21 +220,43 @@ def logout(
 
 
 @router.get("/me", response_model=AuthenticatedUserResponse)
-def get_me(current_user: CurrentUser) -> AuthenticatedUserResponse:
+def get_me(current_user: CurrentUser, response: Response) -> AuthenticatedUserResponse:
+    # Re-issue readable CSRF so cross-origin clients can store it after page reload.
+    settings = get_settings()
+    csrf_token = new_csrf_token()
+    response.set_cookie(
+        key=settings.csrf_cookie_name,
+        value=csrf_token,
+        httponly=False,
+        secure=settings.cookie_secure,
+        samesite=settings.cookie_samesite,
+        path="/",
+        max_age=settings.refresh_token_days * 86400,
+    )
     return AuthenticatedUserResponse(
         id=str(current_user.user_id),
         organization_id=str(current_user.organization_id),
         email=current_user.email,
         display_name=current_user.display_name,
         role=current_user.role.value,
+        csrf_token=csrf_token,
     )
 
 
 @router.post("/password-reset/request")
 def request_password_reset(
     payload: PasswordResetRequest,
+    request: Request,
     session: DatabaseSession,
 ) -> dict[str, str]:
+    ip_address = request.client.host if request.client else "127.0.0.1"
+    if password_reset_is_rate_limited(session, email=payload.email, ip_address=ip_address):
+        session.commit()
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many password reset requests. Please wait before trying again.",
+        )
+    record_password_reset_attempt(session, email=payload.email, ip_address=ip_address)
     create_password_reset_token(session, email=payload.email)
     session.commit()
     return {

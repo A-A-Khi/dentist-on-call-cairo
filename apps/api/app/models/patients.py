@@ -10,6 +10,7 @@ from sqlalchemy import (
     Enum,
     ForeignKey,
     Index,
+    Integer,
     String,
     Text,
     UniqueConstraint,
@@ -151,6 +152,18 @@ class Visit(UUIDPrimaryKeyMixin, OrganizationScopedMixin, TimestampMixin, Base):
     )
     total_cost_minor: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
     paid_amount_minor: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
+    # Direct case costs (lab, materials, etc.) deducted before % revenue shares.
+    case_cost_minor: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
+    case_cost_note: Mapped[str | None] = mapped_column(String(160))
+    # Snapshot of acquisition source at visit time (survives later patient edits).
+    source_stream_id: Mapped[UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True), ForeignKey("case_streams.id", ondelete="SET NULL")
+    )
+    # Snapshot of case revenue split at visit creation (percents must sum to 100).
+    doctor_share_percent: Mapped[int] = mapped_column(Integer, nullable=False, default=35)
+    assistant_share_percent: Mapped[int] = mapped_column(Integer, nullable=False, default=15)
+    referral_share_percent: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    org_share_percent: Mapped[int] = mapped_column(Integer, nullable=False, default=50)
 
     patient: Mapped[Patient] = relationship(back_populates="visits")
     doctor: Mapped["DoctorProfile"] = relationship(back_populates="visits")

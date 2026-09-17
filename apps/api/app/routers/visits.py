@@ -6,12 +6,29 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy import or_, select
 
-from app.auth.dependencies import CurrentUser, DatabaseSession, require_csrf
+from app.auth.dependencies import (
+    CurrentUser,
+    DatabaseSession,
+    current_doctor_profile_id,
+    ensure_doctor_owns_visit,
+    ensure_patient_access,
+    require_csrf,
+    require_roles,
+)
 from app.models.audit import AuditLog
-from app.models.enums import ProcedureStatus, TransactionStatus, TransactionType, VisitStatus
+from app.models.enums import (
+    AppointmentStatus,
+    ProcedureStatus,
+    TransactionStatus,
+    TransactionType,
+    UserRole,
+    VisitStatus,
+)
 from app.models.identity import DoctorProfile, User
-from app.models.operations import FinancialCategory, FinancialTransaction
+from app.models.operations import CaseStream, FinancialCategory, FinancialTransaction
 from app.models.patients import Patient, Visit, VisitProcedure
+from app.models.scheduling import Appointment, AppointmentStatusEvent
+from app.services.revenue_split import serialize_revenue_share, visit_share_snapshot
 
 router = APIRouter(tags=["visits"])
 
@@ -32,10 +49,26 @@ class VisitCreateRequest(BaseModel):
     procedures: list[ProcedureInput] = []
     status: str = "Completed"
     paid_egp: int | None = None
+    case_cost_egp: int = 0
+    case_cost_note: str | None = None
+    source_stream_id: UUID | None = None
+    appointment_id: UUID | None = None
 
 
 class VisitPaymentRequest(BaseModel):
     amount_egp: int = Field(..., gt=0)
+
+
+class VisitUpdateRequest(BaseModel):
+    chief_complaint: str | None = None
+    clinical_findings: str | None = None
+    diagnosis: str | None = None
+    doctor_notes: str | None = None
+    prescriptions: str | None = None
+    procedures: list[ProcedureInput] | None = None
+    status: str | None = None
+    case_cost_egp: int | None = None
+    case_cost_note: str | None = None
 
 
 def _egp(minor: int | None) -> int:
@@ -89,11 +122,15 @@ def _serialize_visit(
     session: DatabaseSession,
     visit: Visit,
     patient: Patient,
+    *,
+    include_financials: bool = True,
 ) -> dict[str, Any]:
     procs = session.scalars(select(VisitProcedure).where(VisitProcedure.visit_id == visit.id)).all()
     total = _egp(visit.total_cost_minor)
     paid = _egp(visit.paid_amount_minor)
-    return {
+    case_cost = _egp(visit.case_cost_minor)
+    source_stream = session.get(CaseStream, visit.source_stream_id) if visit.source_stream_id else None
+    payload: dict[str, Any] = {
         "id": str(visit.id),
         "patientId": patient.patient_code,
         "patientName": patient.full_name,
@@ -103,12 +140,15 @@ def _serialize_visit(
         "chiefComplaint": visit.chief_complaint or "—",
         "clinicalFindings": visit.clinical_findings or "—",
         "diagnosis": visit.diagnosis_text or "—",
+        "sourceStreamId": str(visit.source_stream_id) if visit.source_stream_id else None,
+        "sourceStream": source_stream.name_en if source_stream else "Dentist on Call",
         "procedures": [
             {
                 "id": str(p.id),
                 "name": p.procedure_name,
                 "toothNumber": p.notes,
-                "costEGP": _egp(p.cost_minor),
+                # Procedure fee is operational finance — hide from medical staff.
+                "costEGP": _egp(p.cost_minor) if include_financials else None,
                 "status": "Completed" if p.status == ProcedureStatus.COMPLETED else "Planned",
             }
             for p in procs
@@ -116,11 +156,32 @@ def _serialize_visit(
         "attachments": [],
         "doctorNotes": visit.doctor_notes or "—",
         "prescriptions": [visit.treatment_notes] if visit.treatment_notes else [],
-        "status": "Completed" if visit.status == VisitStatus.COMPLETED else "Draft",
-        "totalCostEGP": total,
-        "paidAmountEGP": paid,
-        "remainingEGP": max(total - paid, 0),
+        "status": (
+            "Completed"
+            if visit.status in (VisitStatus.COMPLETED, VisitStatus.AMENDED)
+            else "Draft"
+        ),
     }
+    if include_financials:
+        payload.update(
+            {
+                "totalCostEGP": total,
+                "paidAmountEGP": paid,
+                "remainingEGP": max(total - paid, 0),
+                "caseCostEGP": case_cost,
+                "caseCostNote": visit.case_cost_note,
+                "revenueShare": serialize_revenue_share(
+                    doctor_percent=visit.doctor_share_percent,
+                    assistant_percent=visit.assistant_share_percent,
+                    referral_percent=visit.referral_share_percent,
+                    org_percent=visit.org_share_percent,
+                    paid_egp=paid,
+                    case_cost_egp=case_cost,
+                    case_cost_note=visit.case_cost_note,
+                ),
+            }
+        )
+    return payload
 
 
 def _post_visit_revenue(
@@ -163,7 +224,7 @@ def list_outstanding_visits(
     current_user: CurrentUser,
     session: DatabaseSession,
 ) -> list[dict[str, Any]]:
-    visits = session.scalars(
+    query = (
         select(Visit)
         .where(
             Visit.organization_id == current_user.organization_id,
@@ -171,7 +232,14 @@ def list_outstanding_visits(
             Visit.total_cost_minor > 0,
         )
         .order_by(Visit.occurred_at.desc())
-    ).all()
+    )
+    if current_user.role != UserRole.ADMIN:
+        doctor_id = current_doctor_profile_id(session, current_user=current_user)
+        if doctor_id is None:
+            return []
+        query = query.where(Visit.doctor_id == doctor_id)
+
+    visits = session.scalars(query).all()
 
     result: list[dict[str, Any]] = []
     for visit in visits:
@@ -190,13 +258,23 @@ def list_patient_visits(
 ) -> list[dict[str, Any]]:
     patient = _resolve_patient(session, current_user.organization_id, patient_identifier)
     if not patient:
-        return []
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found.")
+    ensure_patient_access(session, current_user=current_user, patient_id=patient.id)
 
-    visits = session.scalars(
-        select(Visit).where(Visit.patient_id == patient.id).order_by(Visit.occurred_at.desc())
-    ).all()
+    query = select(Visit).where(Visit.patient_id == patient.id)
+    include_financials = current_user.role == UserRole.ADMIN
+    if current_user.role != UserRole.ADMIN:
+        doctor_id = current_doctor_profile_id(session, current_user=current_user)
+        if doctor_id is None:
+            return []
+        # Doctors only see their own assigned visits on the current/upcoming horizon
+        # plus any earlier visits they themselves recorded for continuity of care notes.
+        query = query.where(Visit.doctor_id == doctor_id)
+    visits = session.scalars(query.order_by(Visit.occurred_at.desc())).all()
 
-    return [_serialize_visit(session, v, patient) for v in visits]
+    return [
+        _serialize_visit(session, v, patient, include_financials=include_financials) for v in visits
+    ]
 
 
 @router.post(
@@ -213,10 +291,17 @@ def create_visit(
     patient = _resolve_patient(session, current_user.organization_id, patient_identifier)
     if not patient:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found.")
+    ensure_patient_access(session, current_user=current_user, patient_id=patient.id)
 
-    doc_profile = session.scalar(
-        select(DoctorProfile).where(DoctorProfile.organization_id == current_user.organization_id).limit(1)
-    )
+    doc_profile = None
+    if current_user.role == UserRole.DOCTOR:
+        own_id = current_doctor_profile_id(session, current_user=current_user)
+        if own_id:
+            doc_profile = session.get(DoctorProfile, own_id)
+    if doc_profile is None:
+        doc_profile = session.scalar(
+            select(DoctorProfile).where(DoctorProfile.organization_id == current_user.organization_id).limit(1)
+        )
     if not doc_profile:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No active doctor on duty.")
 
@@ -224,12 +309,60 @@ def create_visit(
 
     total_cost_egp = sum(max(p.cost_egp, 0) for p in payload.procedures)
     paid_egp = total_cost_egp if payload.paid_egp is None else max(0, min(payload.paid_egp, total_cost_egp))
+    # Case costs & revenue economics are admin-managed; doctors cannot set them.
+    if current_user.role == UserRole.ADMIN:
+        case_cost_egp = max(0, int(payload.case_cost_egp or 0))
+        case_cost_note = (payload.case_cost_note or "").strip() or None
+        if case_cost_note and len(case_cost_note) > 160:
+            case_cost_note = case_cost_note[:160]
+    else:
+        case_cost_egp = 0
+        case_cost_note = None
+        # Doctors may chart fees but not post collections — admin collects later.
+        paid_egp = 0
+
+    # Per-visit source: chosen stream applies only to this visit.
+    # Empty / null => fully ours (Dentist on Call) — no referral share.
+    visit_source_stream_id: UUID | None = None
+    if payload.source_stream_id is not None:
+        stream = session.get(CaseStream, payload.source_stream_id)
+        if (
+            stream is None
+            or stream.organization_id != current_user.organization_id
+            or not stream.is_active
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid or inactive referrer / case stream.",
+            )
+        visit_source_stream_id = stream.id
+
+    shares = visit_share_snapshot(session, visit_source_stream_id)
+
+    linked_appointment: Appointment | None = None
+    if payload.appointment_id is not None:
+        linked_appointment = session.get(Appointment, payload.appointment_id)
+        if (
+            linked_appointment is None
+            or linked_appointment.organization_id != current_user.organization_id
+            or linked_appointment.patient_id != patient.id
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid appointment for this patient.",
+            )
+        if linked_appointment.status in {AppointmentStatus.CANCELLED, AppointmentStatus.NO_SHOW}:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot start a visit from a cancelled or no-show appointment.",
+            )
 
     visit = Visit(
         id=uuid4(),
         organization_id=current_user.organization_id,
         patient_id=patient.id,
         doctor_id=doc_profile.id,
+        appointment_id=linked_appointment.id if linked_appointment else None,
         occurred_at=datetime.now(UTC),
         chief_complaint=payload.chief_complaint,
         clinical_findings=payload.clinical_findings,
@@ -239,9 +372,34 @@ def create_visit(
         status=visit_status_enum,
         total_cost_minor=total_cost_egp * 100,
         paid_amount_minor=paid_egp * 100,
+        case_cost_minor=case_cost_egp * 100,
+        case_cost_note=case_cost_note,
+        source_stream_id=visit_source_stream_id,
+        doctor_share_percent=shares["doctor"],
+        assistant_share_percent=shares["assistant"],
+        referral_share_percent=shares["referral"],
+        org_share_percent=shares["org"],
     )
     session.add(visit)
     session.flush()
+
+    if linked_appointment is not None and visit_status_enum == VisitStatus.COMPLETED:
+        if linked_appointment.status != AppointmentStatus.COMPLETED:
+            old_status = linked_appointment.status
+            linked_appointment.status = AppointmentStatus.COMPLETED
+            linked_appointment.completed_at = datetime.now(UTC)
+            session.add(
+                AppointmentStatusEvent(
+                    id=uuid4(),
+                    organization_id=current_user.organization_id,
+                    appointment_id=linked_appointment.id,
+                    from_status=old_status,
+                    to_status=AppointmentStatus.COMPLETED,
+                    changed_by_user_id=current_user.user_id,
+                    reason="Visit recorded from calendar",
+                    occurred_at=datetime.now(UTC),
+                )
+            )
 
     for p in payload.procedures:
         cost_minor = max(p.cost_egp, 0) * 100
@@ -296,26 +454,196 @@ def create_visit(
             occurred_at=datetime.now(UTC),
             metadata_json={
                 "patient_code": patient.patient_code,
+                "appointment_id": str(linked_appointment.id) if linked_appointment else None,
                 "procedures_count": len(payload.procedures),
                 "total_egp": total_cost_egp,
                 "paid_egp": paid_egp,
+                "case_cost_egp": case_cost_egp,
                 "remaining_egp": total_cost_egp - paid_egp,
+                "revenue_share": shares,
             },
         )
     )
     session.commit()
 
-    return {
+    include_financials = current_user.role == UserRole.ADMIN
+    result: dict[str, Any] = {
         "id": str(visit.id),
         "patientCode": patient.patient_code,
         "status": visit.status.value,
-        "totalCostEGP": total_cost_egp,
-        "paidAmountEGP": paid_egp,
-        "remainingEGP": total_cost_egp - paid_egp,
     }
+    if include_financials:
+        result.update(
+            {
+                "totalCostEGP": total_cost_egp,
+                "paidAmountEGP": paid_egp,
+                "remainingEGP": total_cost_egp - paid_egp,
+                "caseCostEGP": case_cost_egp,
+                "caseCostNote": case_cost_note,
+                "revenueShare": serialize_revenue_share(
+                    doctor_percent=shares["doctor"],
+                    assistant_percent=shares["assistant"],
+                    referral_percent=shares["referral"],
+                    org_percent=shares["org"],
+                    paid_egp=paid_egp,
+                    case_cost_egp=case_cost_egp,
+                    case_cost_note=case_cost_note,
+                ),
+            }
+        )
+    return result
 
 
-@router.post("/visits/{visit_id}/payments", dependencies=[Depends(require_csrf)])
+@router.get("/visits/{visit_id}")
+def get_visit(
+    visit_id: UUID,
+    current_user: CurrentUser,
+    session: DatabaseSession,
+) -> dict[str, Any]:
+    visit = session.scalar(
+        select(Visit).where(
+            Visit.id == visit_id,
+            Visit.organization_id == current_user.organization_id,
+        )
+    )
+    if not visit:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Visit not found.")
+    patient = session.get(Patient, visit.patient_id)
+    if not patient or patient.deleted_at is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found.")
+    ensure_patient_access(session, current_user=current_user, patient_id=patient.id)
+    ensure_doctor_owns_visit(session, current_user=current_user, visit=visit)
+    return _serialize_visit(
+        session,
+        visit,
+        patient,
+        include_financials=current_user.role == UserRole.ADMIN,
+    )
+
+
+@router.patch("/visits/{visit_id}", dependencies=[Depends(require_csrf)])
+def update_visit(
+    visit_id: UUID,
+    payload: VisitUpdateRequest,
+    current_user: CurrentUser,
+    session: DatabaseSession,
+) -> dict[str, Any]:
+    visit = session.scalar(
+        select(Visit).where(
+            Visit.id == visit_id,
+            Visit.organization_id == current_user.organization_id,
+        )
+    )
+    if not visit:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Visit not found.")
+
+    patient = session.get(Patient, visit.patient_id)
+    if not patient or patient.deleted_at is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found.")
+    ensure_patient_access(session, current_user=current_user, patient_id=patient.id)
+    ensure_doctor_owns_visit(session, current_user=current_user, visit=visit)
+
+    # Doctors may only edit draft visits; completed/amended records require admin.
+    if current_user.role != UserRole.ADMIN and visit.status != VisitStatus.DRAFT:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only administrators can amend completed visits.",
+        )
+
+    if "chief_complaint" in payload.model_fields_set:
+        visit.chief_complaint = payload.chief_complaint
+    if "clinical_findings" in payload.model_fields_set:
+        visit.clinical_findings = payload.clinical_findings
+    if "diagnosis" in payload.model_fields_set:
+        visit.diagnosis_text = payload.diagnosis
+    if "doctor_notes" in payload.model_fields_set:
+        visit.doctor_notes = payload.doctor_notes
+    if "prescriptions" in payload.model_fields_set:
+        visit.treatment_notes = payload.prescriptions
+    # Doctors may not change case-cost economics.
+    if current_user.role == UserRole.ADMIN:
+        if "case_cost_egp" in payload.model_fields_set and payload.case_cost_egp is not None:
+            visit.case_cost_minor = max(0, int(payload.case_cost_egp)) * 100
+        if "case_cost_note" in payload.model_fields_set:
+            note = (payload.case_cost_note or "").strip() or None
+            if note and len(note) > 160:
+                note = note[:160]
+            visit.case_cost_note = note
+
+    if payload.procedures is not None:
+        total_cost_egp = sum(max(p.cost_egp, 0) for p in payload.procedures)
+        paid_egp = _egp(visit.paid_amount_minor)
+        if total_cost_egp < paid_egp:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Total cost cannot be less than amount already paid ({paid_egp} EGP).",
+            )
+        existing = session.scalars(select(VisitProcedure).where(VisitProcedure.visit_id == visit.id)).all()
+        for proc in existing:
+            session.delete(proc)
+        session.flush()
+
+        visit.total_cost_minor = total_cost_egp * 100
+        completed_like = visit.status in (VisitStatus.COMPLETED, VisitStatus.AMENDED)
+        for p in payload.procedures:
+            session.add(
+                VisitProcedure(
+                    id=uuid4(),
+                    organization_id=current_user.organization_id,
+                    visit_id=visit.id,
+                    procedure_name=p.name,
+                    cost_minor=max(p.cost_egp, 0) * 100,
+                    currency_code="EGP",
+                    notes=p.tooth_number,
+                    status=ProcedureStatus.COMPLETED if completed_like else ProcedureStatus.PLANNED,
+                    performed_at=datetime.now(UTC) if completed_like else None,
+                )
+            )
+
+    if payload.status is not None:
+        status_key = payload.status.strip().upper()
+        if status_key == "COMPLETED":
+            visit.status = VisitStatus.COMPLETED
+        elif status_key == "DRAFT":
+            visit.status = VisitStatus.DRAFT
+        elif status_key == "AMENDED":
+            visit.status = VisitStatus.AMENDED
+        else:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid visit status.")
+    elif visit.status == VisitStatus.COMPLETED and payload.model_fields_set:
+        visit.status = VisitStatus.AMENDED
+
+    session.add(
+        AuditLog(
+            id=uuid4(),
+            organization_id=current_user.organization_id,
+            actor_user_id=current_user.user_id,
+            actor_role=current_user.role.value,
+            action="VISIT_UPDATED",
+            target_type="visits",
+            target_id=visit.id,
+            description=f"Updated clinical visit for {patient.full_name} ({patient.patient_code})",
+            occurred_at=datetime.now(UTC),
+            metadata_json={
+                "patient_code": patient.patient_code,
+                "fields": sorted(payload.model_fields_set),
+            },
+        )
+    )
+    session.commit()
+    session.refresh(visit)
+    return _serialize_visit(
+        session,
+        visit,
+        patient,
+        include_financials=current_user.role == UserRole.ADMIN,
+    )
+
+
+@router.post(
+    "/visits/{visit_id}/payments",
+    dependencies=[Depends(require_csrf), Depends(require_roles(UserRole.ADMIN))],
+)
 def record_visit_payment(
     visit_id: UUID,
     payload: VisitPaymentRequest,
@@ -334,6 +662,7 @@ def record_visit_payment(
     patient = session.get(Patient, visit.patient_id)
     if not patient or patient.deleted_at is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found.")
+    ensure_patient_access(session, current_user=current_user, patient_id=patient.id)
 
     remaining_egp = _egp(visit.total_cost_minor) - _egp(visit.paid_amount_minor)
     if remaining_egp <= 0:
@@ -387,4 +716,15 @@ def record_visit_payment(
         "totalCostEGP": _egp(visit.total_cost_minor),
         "paidAmountEGP": _egp(visit.paid_amount_minor),
         "remainingEGP": new_remaining,
+        "caseCostEGP": _egp(visit.case_cost_minor),
+        "caseCostNote": visit.case_cost_note,
+        "revenueShare": serialize_revenue_share(
+            doctor_percent=visit.doctor_share_percent,
+            assistant_percent=visit.assistant_share_percent,
+            referral_percent=visit.referral_share_percent,
+            org_percent=visit.org_share_percent,
+            paid_egp=_egp(visit.paid_amount_minor),
+            case_cost_egp=_egp(visit.case_cost_minor),
+            case_cost_note=visit.case_cost_note,
+        ),
     }

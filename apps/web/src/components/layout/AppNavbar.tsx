@@ -5,6 +5,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { Badge } from "../ui/Badge";
+import { Button } from "../ui/Button";
+import { BrandLogo } from "../brand/BrandLogo";
 import { logoutUser } from "../../lib/auth";
 import { getDictionarySync } from "../../i18n/get-dictionary";
 import { getNavItems, getNavSectionLabel } from "./nav-config";
@@ -80,20 +82,7 @@ export function AppNavbar({
             href={`/${locale}/dashboard/${userRole === "ADMIN" ? "admin" : "doctor"}`}
             className="flex items-center gap-2 sm:gap-2.5 transition-opacity hover:opacity-90 min-w-0"
           >
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#dfbf70] via-[#caa95a] to-[#99782a] text-on-gold shadow-md shadow-[#caa95a]/20 shrink-0">
-              <svg
-                className="h-5 w-5"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M12 2C8.5 2 6 4.5 6 8c0 4 3 9 6 14 3-5 6-10 6-14 0-3.5-2.5-6-6-6z" />
-                <path d="M9 8h6" />
-              </svg>
-            </div>
+            <BrandLogo variant="nav" priority />
             <div className="min-w-0 truncate">
               <span className="font-bold tracking-tight text-primary text-xs sm:text-base truncate block">{brandName}</span>
               <span className="hidden lg:inline-block text-[10px] text-secondary ltr:ml-2 rtl:mr-2 font-normal">
@@ -167,18 +156,19 @@ export function AppNavbar({
             </div>
           </div>
 
-          <button
+          <Button
             type="button"
+            variant="danger-soft"
+            size="xs"
             onClick={handleLogout}
             disabled={isLoggingOut}
-            className="glass flex items-center gap-1.5 rounded-xl px-2.5 sm:px-3 py-1.5 text-xs font-medium text-secondary transition-all hover:border-rose-500/40 hover:bg-rose-50 hover:text-rose-700 disabled:opacity-50"
             title={logoutText}
           >
-            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
             </svg>
             <span className="hidden sm:inline">{logoutText}</span>
-          </button>
+          </Button>
         </div>
       </header>
 
@@ -254,16 +244,18 @@ export function AppNavbar({
             </div>
 
             <div className="pt-4 border-t glass-divider space-y-3">
-              <button
+              <Button
                 type="button"
+                variant="danger-soft"
+                size="sm"
                 onClick={handleLogout}
-                className="w-full flex items-center justify-center gap-2 rounded-xl border border-rose-500/30 bg-rose-50 py-2.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 transition-colors"
+                className="w-full"
               >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                 </svg>
                 <span>{logoutText}</span>
-              </button>
+              </Button>
 
               <div className="text-center text-[10px] text-muted">
                 Dentist on Call Cairo • 2026

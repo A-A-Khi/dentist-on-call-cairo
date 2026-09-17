@@ -7,6 +7,8 @@ export interface AuthenticatedUser {
   display_name: string;
   role: UserRole;
   access_token?: string;
+  refresh_token?: string;
+  csrf_token?: string;
 }
 
 export interface ApiErrorResponse {

@@ -6,32 +6,89 @@ import { useParams } from "next/navigation";
 import { AppShell } from "../../../components/layout/AppShell";
 import { PageHeader } from "../../../components/layout/PageHeader";
 import { Badge } from "../../../components/ui/Badge";
+import {
+  DataTable,
+  TableActions,
+  TableText,
+  dash,
+  useTableDensity,
+  type DataColumn,
+  type SortState,
+  type TableActionItem,
+} from "../../../components/ui/DataTable";
 import { EmptyState } from "../../../components/ui/EmptyState";
-import { fetchAppointments } from "../../../lib/clinical-api";
+import { Button, ButtonLink } from "../../../components/ui/Button";
+import { Input } from "../../../components/ui/Input";
+import { Modal } from "../../../components/ui/Modal";
+import { SkeletonTable } from "../../../components/ui/Skeleton";
+import {
+  deleteAppointment,
+  fetchAppointments,
+  updateAppointment,
+  updateAppointmentStatus,
+} from "../../../lib/clinical-api";
 import { getDictionarySync } from "../../../i18n/get-dictionary";
+import { getStoredSessionUser } from "../../../lib/session";
 import type { Appointment } from "../../../lib/clinical-data";
+
+function toIsoDate(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+/** Reservations board: past month through next two months. */
+function reservationsWindow(): { from: string; to: string } {
+  const now = new Date();
+  const from = new Date(now);
+  from.setDate(from.getDate() - 30);
+  const to = new Date(now);
+  to.setDate(to.getDate() + 60);
+  return { from: toIsoDate(from), to: toIsoDate(to) };
+}
+
+function toTimeInputValue(displayTime: string): string {
+  const match = displayTime.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+  if (!match) return "10:00";
+  let hours = Number(match[1]);
+  const minutes = match[2];
+  const meridian = match[3]?.toUpperCase();
+  if (meridian === "PM" && hours < 12) hours += 12;
+  if (meridian === "AM" && hours === 12) hours = 0;
+  return `${String(hours).padStart(2, "0")}:${minutes}`;
+}
 
 export default function ReservationsPage() {
   const params = useParams();
   const locale = (params?.locale as string) || "en";
   const dict = getDictionarySync(locale);
+  const isAr = locale === "ar";
+  const actions = dict.reservations.actions;
 
   const [reservations, setReservations] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [isAdmin, setIsAdmin] = useState(true);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [editing, setEditing] = useState<Appointment | null>(null);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [density, setDensity] = useTableDensity("default");
+  const [sort, setSort] = useState<SortState>({ id: "when", dir: "asc" });
+
+  useEffect(() => {
+    setIsAdmin((getStoredSessionUser()?.role ?? "ADMIN") === "ADMIN");
+  }, []);
 
   useEffect(() => {
     async function load() {
       setIsLoading(true);
       try {
-        const data = await fetchAppointments();
+        const data = await fetchAppointments(undefined, reservationsWindow());
         setReservations(data);
       } finally {
         setIsLoading(false);
       }
     }
-    load();
+    void load();
   }, []);
 
   const filtered = reservations.filter((r) => {
@@ -49,6 +106,282 @@ export default function ReservationsPage() {
     return true;
   });
 
+  const sorted = [...filtered].sort((a, b) => {
+    if (!sort) return 0;
+    const dir = sort.dir === "asc" ? 1 : -1;
+    if (sort.id === "patient") return a.patientName.localeCompare(b.patientName) * dir;
+    if (sort.id === "when") {
+      const ak = `${a.date} ${a.time}`;
+      const bk = `${b.date} ${b.time}`;
+      return ak.localeCompare(bk) * dir;
+    }
+    if (sort.id === "status") return a.status.localeCompare(b.status) * dir;
+    if (sort.id === "ref") return a.id.localeCompare(b.id) * dir;
+    return 0;
+  });
+
+  const refresh = async () => {
+    const data = await fetchAppointments(undefined, reservationsWindow());
+    setReservations(data);
+  };
+
+  const changeStatus = async (appointment: Appointment, status: Appointment["status"]) => {
+    if (!isAdmin) return;
+    setBusyId(appointment.id);
+    try {
+      await updateAppointmentStatus(appointment.id, status);
+      await refresh();
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const removeReservation = async (appointment: Appointment) => {
+    if (!isAdmin) return;
+    const confirmed = window.confirm(
+      isAr
+        ? `حذف حجز ${appointment.patientName}؟`
+        : `Delete reservation for ${appointment.patientName}?`,
+    );
+    if (!confirmed) return;
+    setBusyId(appointment.id);
+    try {
+      await deleteAppointment(appointment.id);
+      await refresh();
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editing) return;
+    setIsSavingEdit(true);
+    const formData = new FormData(e.currentTarget);
+    try {
+      await updateAppointment(editing.id, {
+        date: (formData.get("date") as string) || editing.date,
+        time: (formData.get("time") as string) || toTimeInputValue(editing.time),
+        durationMinutes: Number(formData.get("duration") || editing.durationMinutes),
+        procedure: (formData.get("procedure") as string) || editing.procedure,
+        chiefComplaint: (formData.get("chiefComplaint") as string) || editing.chiefComplaint,
+        location: (formData.get("location") as string) || editing.location,
+      });
+      await refresh();
+      setEditing(null);
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
+
+  const actionItems = (r: Appointment): TableActionItem[] => {
+    const status = r.status.toUpperCase();
+    const closed = status === "CANCELLED" || status === "COMPLETED" || status === "NO_SHOW";
+    const busy = busyId === r.id;
+    const items: TableActionItem[] = [];
+
+    if (isAdmin && !closed) {
+      if (status === "PENDING") {
+        items.push({
+          id: "confirm",
+          label: actions.confirm,
+          disabled: busy,
+          onClick: () => void changeStatus(r, "CONFIRMED"),
+        });
+      }
+      items.push(
+        {
+          id: "reschedule",
+          label: actions.reschedule,
+          disabled: busy,
+          onClick: () => setEditing(r),
+        },
+        {
+          id: "complete",
+          label: actions.complete,
+          disabled: busy,
+          onClick: () => void changeStatus(r, "COMPLETED"),
+        },
+        {
+          id: "noshow",
+          label: actions.noShow,
+          disabled: busy,
+          onClick: () => void changeStatus(r, "NO_SHOW"),
+        },
+        {
+          id: "cancel",
+          label: actions.cancel,
+          disabled: busy,
+          tone: "danger",
+          onClick: () => void changeStatus(r, "CANCELLED"),
+        },
+        {
+          id: "delete",
+          label: isAr ? "حذف" : "Delete",
+          disabled: busy,
+          tone: "danger",
+          onClick: () => void removeReservation(r),
+        }
+      );
+    }
+    if (isAdmin && closed) {
+      items.push(
+        {
+          id: "reschedule",
+          label: actions.reschedule,
+          disabled: busy,
+          onClick: () => setEditing(r),
+        },
+        {
+          id: "delete",
+          label: isAr ? "حذف" : "Delete",
+          disabled: busy,
+          tone: "danger",
+          onClick: () => void removeReservation(r),
+        }
+      );
+    }
+    if (!closed) {
+      items.push({
+        id: "visit",
+        label: isAr ? "بدء الزيارة" : "Start visit",
+        tone: "accent",
+        href: `/${locale}/patients/${r.patientCode}/visit/new?appointmentId=${encodeURIComponent(r.id)}&chiefComplaint=${encodeURIComponent(r.chiefComplaint || r.procedure)}&returnTo=calendar`,
+      });
+    }
+    return items;
+  };
+
+  const columns: DataColumn<Appointment>[] = [
+    {
+      id: "ref",
+      header: isAr ? "كود الحجز" : "Booking ID",
+      sortable: true,
+      minWidth: 100,
+      cardRole: "id",
+      cardLabel: isAr ? "كود الحجز" : "Booking ID",
+      truncate: false,
+      cell: (r) => (
+        <span className="font-mono font-medium text-[var(--gold-primary)]">
+          {dash(r.id.slice(0, 8).toUpperCase())}
+        </span>
+      ),
+    },
+    {
+      id: "patient",
+      header: isAr ? "المريض" : "Patient",
+      pin: true,
+      sortable: true,
+      minWidth: 160,
+      cardRole: "identity",
+      cardCell: (r) => dash(r.patientName),
+      truncate: false,
+      cell: (r) => (
+        <div className="min-w-0 max-w-[14rem]">
+          <Link
+            href={`/${locale}/patients/${r.patientCode}`}
+            className="font-semibold text-primary hover:text-[var(--gold-primary)]"
+          >
+            <TableText>{dash(r.patientName)}</TableText>
+          </Link>
+          <TableText className="font-mono text-[10px] text-muted">
+            {dash(r.patientCode)}
+            {r.patientPhone ? ` · ${r.patientPhone}` : ""}
+          </TableText>
+        </div>
+      ),
+    },
+    {
+      id: "when",
+      header: isAr ? "التاريخ والوقت" : "Date & Time",
+      sortable: true,
+      truncate: false,
+      cell: (r) => (
+        <div>
+          <div className="font-medium text-primary tabular-nums">{dash(r.date)}</div>
+          <div className="font-mono text-[10px] text-secondary tabular-nums">
+            {dash(r.time)}
+            {r.durationMinutes != null ? ` (${r.durationMinutes}m)` : ""}
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: "time",
+      header: isAr ? "الوقت" : "Time",
+      cardRole: "value",
+      cardOnly: true,
+      cardCell: (r) => <span className="data-table-num">{dash(r.time)}</span>,
+      cell: () => null,
+    },
+    {
+      id: "due",
+      header: isAr ? "الموعد" : "Due",
+      cardRole: "meta",
+      cardOnly: true,
+      cardLabel: isAr ? "موعد" : "Due",
+      cardCell: (r) => <span className="tabular-nums">{dash(r.date)}</span>,
+      cell: () => null,
+    },
+    {
+      id: "doctor",
+      header: isAr ? "الأخصائي" : "Specialist",
+      cardRole: "detail",
+      cardLabel: isAr ? "الأخصائي" : "Specialist",
+      cell: (r) => dash(r.doctorName),
+    },
+    {
+      id: "procedure",
+      header: isAr ? "الإجراء" : "Procedure",
+      minWidth: 160,
+      cardRole: "detail",
+      cardLabel: isAr ? "الإجراء" : "Procedure",
+      truncate: false,
+      cell: (r) => (
+        <div className="min-w-0 max-w-[14rem]">
+          <TableText className="font-semibold text-primary">{dash(r.procedure)}</TableText>
+          {r.chiefComplaint && r.chiefComplaint !== r.procedure ? (
+            <TableText className="text-[10px] italic text-[var(--gold-primary)]">
+              “{r.chiefComplaint}”
+            </TableText>
+          ) : null}
+        </div>
+      ),
+    },
+    {
+      id: "complaint",
+      header: isAr ? "الشكوى" : "Notes",
+      cardRole: "detail",
+      cardOnly: true,
+      cardLabel: isAr ? "الشكوى" : "Notes",
+      cardCell: (r) => dash(r.chiefComplaint),
+      cell: () => null,
+    },
+    {
+      id: "status",
+      header: isAr ? "الحالة" : "Status",
+      sortable: true,
+      cardRole: "state",
+      truncate: false,
+      cell: (r) =>
+        r.status ? (
+          <Badge variant={r.status.toUpperCase() === "CONFIRMED" ? "green" : "gold"} size="sm">
+            {r.status}
+          </Badge>
+        ) : (
+          "–"
+        ),
+    },
+    {
+      id: "actions",
+      header: dict.common.actions,
+      actions: true,
+      cardRole: "actions",
+      truncate: false,
+      cell: (r) => <TableActions items={actionItems(r)} />,
+    },
+  ];
+
   return (
     <AppShell locale={locale}>
       <div className="space-y-6">
@@ -56,47 +389,43 @@ export default function ReservationsPage() {
           title={dict.reservations.title}
           subtitle={dict.reservations.subtitle}
           actions={
-            <Link
-              href={`/${locale}/calendar`}
-              className="inline-flex items-center gap-1.5 glass rounded-xl px-3.5 py-2 text-xs font-medium text-primary glass-hover transition-colors"
-            >
-              <svg className="h-4 w-4 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              <span>{dict.dashboard.quickActions.viewCalendar}</span>
-            </Link>
+            <ButtonLink href={`/${locale}/calendar`} variant="secondary" size="sm">
+              {dict.dashboard.quickActions.viewCalendar}
+            </ButtonLink>
           }
         />
 
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row items-center gap-3 glass-card rounded-2xl p-3">
+        <div className="filter-bar">
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={locale === "ar" ? "البحث بالاسم، كود المريض، أو الإجراء..." : "Search reservations by patient, code, or procedure..."}
-            className="w-full sm:flex-1 glass rounded-xl px-3.5 py-2 text-xs text-primary placeholder:text-muted focus:border-[#caa95a] focus:outline-none"
+            placeholder={
+              isAr
+                ? "البحث بالاسم، كود المريض، أو الإجراء..."
+                : "Search reservations by patient, code, or procedure..."
+            }
+            className="glass-input w-full sm:flex-1 rounded-lg px-3.5 py-2 text-xs text-primary placeholder:text-muted"
           />
 
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="glass rounded-xl px-3 py-2 text-xs text-primary focus:border-[#caa95a] focus:outline-none w-full sm:w-auto"
-            >
-              <option value="ALL">{dict.reservations.filterStatus}: {locale === "ar" ? "الكل" : "All"}</option>
-              <option value="CONFIRMED">{locale === "ar" ? "مؤكد" : "Confirmed"}</option>
-              <option value="PENDING">{locale === "ar" ? "قيد الانتظار" : "Pending"}</option>
-              <option value="COMPLETED">{locale === "ar" ? "مكتمل" : "Completed"}</option>
-              <option value="CANCELLED">{locale === "ar" ? "ملغي" : "Cancelled"}</option>
-            </select>
-          </div>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="glass-input w-full sm:w-auto rounded-lg px-3 py-2 text-xs text-primary"
+          >
+            <option value="ALL">
+              {dict.reservations.filterStatus}: {isAr ? "الكل" : "All"}
+            </option>
+            <option value="CONFIRMED">{isAr ? "مؤكد" : "Confirmed"}</option>
+            <option value="PENDING">{isAr ? "قيد الانتظار" : "Pending"}</option>
+            <option value="COMPLETED">{isAr ? "مكتمل" : "Completed"}</option>
+            <option value="CANCELLED">{isAr ? "ملغي" : "Cancelled"}</option>
+            <option value="NO_SHOW">{isAr ? "لم يحضر" : "No Show"}</option>
+          </select>
         </div>
 
         {isLoading ? (
-          <div className="py-12 text-center text-xs text-secondary">
-            {locale === "ar" ? "جاري تحميل الحجوزات..." : "Loading reservations..."}
-          </div>
+          <SkeletonTable rows={6} />
         ) : filtered.length === 0 ? (
           <EmptyState
             title={dict.reservations.emptyTitle}
@@ -105,123 +434,96 @@ export default function ReservationsPage() {
             actionHref={`/${locale}/calendar`}
           />
         ) : (
-        <div className="glass-card rounded-2xl overflow-hidden">
-          {/* Desktop Table View */}
-          <div className="hidden md:block overflow-x-auto">
-            <table className="w-full text-left rtl:text-right text-xs">
-              <thead className="glass-table-header text-secondary">
-                <tr>
-                  <th className="px-4 py-3.5 font-medium">{locale === "ar" ? "كود الحجز" : "Booking ID"}</th>
-                  <th className="px-4 py-3.5 font-medium">{locale === "ar" ? "المريض" : "Patient"}</th>
-                  <th className="px-4 py-3.5 font-medium">{locale === "ar" ? "التاريخ والوقت" : "Date & Time"}</th>
-                  <th className="px-4 py-3.5 font-medium">{locale === "ar" ? "الأخصائي" : "Specialist"}</th>
-                  <th className="px-4 py-3.5 font-medium">{locale === "ar" ? "الإجراء" : "Procedure"}</th>
-                  <th className="px-4 py-3.5 font-medium">{locale === "ar" ? "الحالة" : "Status"}</th>
-                  <th className="px-4 py-3.5 font-medium text-end">{locale === "ar" ? "الإجراءات" : "Actions"}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200 text-primary">
-                {filtered.map((r) => (
-                    <tr key={r.id} className="glass-hover transition-colors">
-                      <td className="px-4 py-3.5 font-mono text-gold font-medium">{r.id.slice(0, 8).toUpperCase()}</td>
-                      <td className="px-4 py-3.5">
-                        <Link
-                          href={`/${locale}/patients/${r.patientCode}`}
-                          className="font-semibold text-primary hover:text-gold"
-                        >
-                          {r.patientName}
-                        </Link>
-                        <div className="font-mono text-[10px] text-muted">{r.patientCode} • {r.patientPhone}</div>
-                      </td>
-                      <td className="px-4 py-3.5">
-                        <div className="font-medium text-primary">{r.date}</div>
-                        <div className="font-mono text-[10px] text-secondary">{r.time} ({r.durationMinutes}m)</div>
-                      </td>
-                      <td className="px-4 py-3.5 text-primary">{r.doctorName}</td>
-                      <td className="px-4 py-3.5">
-                        <div className="font-semibold text-primary">{r.procedure}</div>
-                        {r.chiefComplaint && r.chiefComplaint !== r.procedure && (
-                          <div className="text-[10px] text-gold italic mt-0.5 max-w-xs truncate">
-                            &ldquo;{r.chiefComplaint}&rdquo;
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-4 py-3.5">
-                        <Badge
-                          variant={r.status.toUpperCase() === "CONFIRMED" ? "green" : "gold"}
-                          size="sm"
-                        >
-                          {r.status}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3.5 text-end">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <Link
-                            href={`/${locale}/patients/${r.patientCode}/visit/new?chiefComplaint=${encodeURIComponent(r.chiefComplaint || r.procedure)}`}
-                            className="rounded-lg bg-[#caa95a]/15 border border-[#caa95a]/30 px-2.5 py-1 text-[11px] font-medium text-gold hover:bg-[#caa95a]/25"
-                          >
-                            {locale === "ar" ? "تسجيل زيارة" : "Record Visit"}
-                          </Link>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Mobile Stacked Card View */}
-          <div className="md:hidden divide-y divide-slate-200 p-3 space-y-3">
-              {filtered.map((r) => (
-                <div key={r.id} className="pt-3 first:pt-0 space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="font-mono text-[10px] text-gold block">{r.id.slice(0, 8).toUpperCase()}</span>
-                      <Link
-                        href={`/${locale}/patients/${r.patientCode}`}
-                        className="font-bold text-sm text-primary hover:text-gold"
-                      >
-                        {r.patientName}
-                      </Link>
-                      <span className="font-mono text-[10px] text-muted block">{r.patientCode}</span>
-                    </div>
-
-                    <Badge
-                      variant={r.status.toUpperCase() === "CONFIRMED" ? "green" : "gold"}
-                      size="sm"
-                    >
-                      {r.status}
-                    </Badge>
-                  </div>
-
-                  <div className="space-y-0.5">
-                    <p className="text-xs text-[#cbd5e1]">
-                      <strong className="text-gold font-medium">{r.procedure}</strong>
-                    </p>
-                    {r.chiefComplaint && r.chiefComplaint !== r.procedure && (
-                      <p className="text-[11px] text-secondary italic">&ldquo;{r.chiefComplaint}&rdquo;</p>
-                    )}
-                  </div>
-
-                  <div className="flex items-center justify-between text-xs text-secondary pt-1">
-                    <span>{r.date} • {r.time}</span>
-                    <span className="text-primary font-medium">{r.doctorName}</span>
-                  </div>
-
-                  <div className="pt-1 flex justify-end">
-                    <Link
-                      href={`/${locale}/patients/${r.patientCode}/visit/new?chiefComplaint=${encodeURIComponent(r.chiefComplaint || r.procedure)}`}
-                      className="w-full text-center rounded-xl bg-[#caa95a]/15 border border-[#caa95a]/30 py-2 text-xs font-semibold text-gold hover:bg-[#caa95a]/25"
-                    >
-                      {locale === "ar" ? "تسجيل زيارة" : "Record Visit"}
-                    </Link>
-                  </div>
-                </div>
-              ))}
-          </div>
-        </div>
+          <DataTable
+            columns={columns}
+            rows={sorted}
+            getRowId={(r) => r.id}
+            density={density}
+            onDensityChange={setDensity}
+            densityLabels={{
+              compact: dict.common.densityCompact,
+              default: dict.common.densityDefault,
+              comfortable: dict.common.densityComfortable,
+            }}
+            sort={sort}
+            onSortChange={setSort}
+            sortControlLabel={dict.common.sort}
+            emptyMessage={dict.common.noRecordsFound}
+            sheetTitle={(r) => r.patientName}
+            sheetDescription={(r) => r.id.slice(0, 8).toUpperCase()}
+            toolbar={
+              <span className="text-[11px] text-muted tabular-nums">
+                {sorted.length} {isAr ? "حجز" : "bookings"}
+              </span>
+            }
+          />
         )}
       </div>
+
+      <Modal
+        isOpen={Boolean(editing)}
+        onClose={() => setEditing(null)}
+        title={actions.reschedule}
+        description={
+          editing
+            ? `${editing.patientName} (${editing.patientCode})`
+            : undefined
+        }
+        size="md"
+      >
+        {editing && (
+          <form onSubmit={(e) => void handleEditSubmit(e)} className="space-y-4 text-xs">
+            <div className="grid grid-cols-2 gap-3">
+              <Input name="date" label={isAr ? "التاريخ" : "Date"} type="date" required defaultValue={editing.date} />
+              <Input
+                name="time"
+                label={isAr ? "الوقت" : "Time"}
+                type="time"
+                required
+                defaultValue={toTimeInputValue(editing.time)}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-secondary mb-1">
+                {isAr ? "المدة" : "Duration"}
+              </label>
+              <select
+                name="duration"
+                defaultValue={String(editing.durationMinutes)}
+                className="w-full glass rounded-xl px-3.5 py-2 text-xs text-primary focus:border-[#caa95a] focus:outline-none"
+              >
+                <option value="30">30</option>
+                <option value="45">45</option>
+                <option value="60">60</option>
+                <option value="90">90</option>
+              </select>
+            </div>
+            <Input
+              name="procedure"
+              label={isAr ? "الإجراء" : "Procedure"}
+              defaultValue={editing.procedure}
+            />
+            <Input
+              name="chiefComplaint"
+              label={isAr ? "الشكوى" : "Chief complaint"}
+              defaultValue={editing.chiefComplaint || ""}
+            />
+            <Input
+              name="location"
+              label={isAr ? "الموقع" : "Location"}
+              defaultValue={editing.location}
+            />
+            <div className="flex justify-end gap-2 pt-2 border-t glass-divider/60">
+              <Button variant="outline" size="sm" type="button" onClick={() => setEditing(null)}>
+                {dict.patientProfile.cancel}
+              </Button>
+              <Button variant="primary" size="sm" type="submit" isLoading={isSavingEdit}>
+                {isAr ? "حفظ التعديلات" : "Save changes"}
+              </Button>
+            </div>
+          </form>
+        )}
+      </Modal>
     </AppShell>
   );
 }

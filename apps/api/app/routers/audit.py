@@ -1,16 +1,17 @@
 from typing import Any
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from sqlalchemy import select
 
-from app.auth.dependencies import CurrentUser, DatabaseSession
+from app.auth.dependencies import CurrentUser, DatabaseSession, require_roles
 from app.models.audit import AuditLog
+from app.models.enums import UserRole
 from app.models.identity import User
 
 router = APIRouter(prefix="/audit", tags=["audit"])
 
 
-@router.get("/logs")
+@router.get("/logs", dependencies=[Depends(require_roles(UserRole.ADMIN))])
 def list_audit_logs(
     current_user: CurrentUser,
     session: DatabaseSession,

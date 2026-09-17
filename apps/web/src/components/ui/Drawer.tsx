@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect } from "react";
+import { createPortal } from "react-dom";
 
 export interface DrawerProps {
   isOpen: boolean;
@@ -35,7 +36,7 @@ export function Drawer({
     };
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
+  if (!isOpen || typeof document === "undefined") return null;
 
   const sideStyles = {
     right: "inset-y-0 end-0 h-full border-s",
@@ -49,15 +50,14 @@ export function Drawer({
     lg: side === "bottom" ? "w-full" : "w-full max-w-xl",
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex">
-      {/* Backdrop */}
+  return createPortal(
+    <div className="fixed inset-0 z-[80] flex" role="dialog" aria-modal="true">
       <div
         className="fixed inset-0 bg-slate-900/30 backdrop-blur-sm transition-opacity"
         onClick={onClose}
+        aria-hidden
       />
 
-      {/* Sheet Content */}
       <div
         className={`glass-popover fixed z-10 flex flex-col p-6 transition-transform ${sideStyles[side]} ${widthStyles[size]}`}
       >
@@ -70,6 +70,7 @@ export function Drawer({
             type="button"
             onClick={onClose}
             className="rounded-lg p-1.5 text-muted glass-hover hover:text-primary transition-colors"
+            aria-label="Close"
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
@@ -77,8 +78,11 @@ export function Drawer({
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto pt-4">{children}</div>
+        <div className="flex-1 overflow-y-auto pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          {children}
+        </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

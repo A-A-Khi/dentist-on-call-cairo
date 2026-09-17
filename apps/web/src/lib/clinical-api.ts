@@ -1,12 +1,16 @@
-import { apiClient } from "./api-client";
+import { ApiError, apiClient } from "./api-client";
 import type {
   Appointment,
   AuditLogRecord,
   CaseStream,
+  DashboardOverview,
   Doctor,
   FinancialCategory,
+  FinancialSummary,
   FinancialTransaction,
   Patient,
+  ReportAnalytics,
+  RevenueShare,
   Visit,
 } from "./clinical-data";
 
@@ -63,12 +67,12 @@ export async function fetchPatients(query?: string): Promise<Patient[]> {
   try {
     const endpoint = query ? `/patients?q=${encodeURIComponent(query)}` : "/patients";
     const data = await apiClient<Patient[]>(endpoint);
-    if (Array.isArray(data) && data.length > 0) {
+    if (Array.isArray(data)) {
       setLocal(STORAGE_KEYS.PATIENTS, data);
       return data;
     }
   } catch {
-    // Fallback to local persistent cache
+    // Fallback to local persistent cache only when API is unreachable
   }
   const cached = getLocal<Patient[]>(STORAGE_KEYS.PATIENTS, []);
   if (!query) return cached;
@@ -87,8 +91,11 @@ export async function fetchPatientById(patientId: string): Promise<Patient | nul
     if (data && data.id) {
       return data;
     }
-  } catch {
-    // Fallback
+  } catch (err) {
+    // 404 means the patient is not on the server — do not resurrect stale local ghosts.
+    if (err instanceof ApiError && err.status === 404) {
+      return null;
+    }
   }
   const cached = getLocal<Patient[]>(STORAGE_KEYS.PATIENTS, []);
   return cached.find((p) => p.code === patientId || p.id === patientId) || null;
@@ -157,7 +164,7 @@ export async function createPatientRecord(input: CreatePatientInput): Promise<{ 
       email: input.email || "",
       address: input.address || "",
       emergencyContact: input.emergencyContact || { name: "—", relationship: "—", phone: "—" },
-      assignedDoctor: "Dr. Tarek Omar",
+      assignedDoctor: "Dr. Sayed El-Bahy",
       status: "Active",
       lastVisit: new Date().toISOString().split("T")[0],
       nextAppointment: null,
@@ -183,8 +190,12 @@ export async function createPatientRecord(input: CreatePatientInput): Promise<{ 
     };
     setLocal(STORAGE_KEYS.PATIENTS, [newRecord, ...existing]);
     return response;
-  } catch {
-    // Local offline creation fallback
+  } catch (err) {
+    // Auth/CSRF/validation failures must surface — do not invent local-only patients.
+    if (err instanceof ApiError && err.status >= 400 && err.status < 500) {
+      throw err;
+    }
+    // Local offline creation fallback (network / server down)
     const existing = getLocal<Patient[]>(STORAGE_KEYS.PATIENTS, []);
     const nextNum = 100 + existing.length + 1;
     const code = `DOC-${String(nextNum).padStart(6, "0")}`;
@@ -201,7 +212,7 @@ export async function createPatientRecord(input: CreatePatientInput): Promise<{ 
       email: input.email || "",
       address: input.address || "",
       emergencyContact: input.emergencyContact || { name: "—", relationship: "—", phone: "—" },
-      assignedDoctor: "Dr. Tarek Omar",
+      assignedDoctor: "Dr. Sayed El-Bahy",
       status: "Active",
       lastVisit: new Date().toISOString().split("T")[0],
       nextAppointment: null,
@@ -227,6 +238,172 @@ export async function createPatientRecord(input: CreatePatientInput): Promise<{ 
     };
     setLocal(STORAGE_KEYS.PATIENTS, [newRecord, ...existing]);
     return { id, code, fullName: input.fullName };
+  }
+}
+
+export type UpdatePatientInput = CreatePatientInput & {
+  status?: string;
+};
+
+export async function updatePatientRecord(
+  patientIdentifier: string,
+  input: UpdatePatientInput
+): Promise<Patient> {
+  try {
+    const response = await apiClient<Patient>(`/patients/${encodeURIComponent(patientIdentifier)}`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        full_name: input.fullName,
+        date_of_birth: input.dob || null,
+        gender: input.gender || "Male",
+        phone: input.phone || null,
+        whatsapp_phone: input.whatsappPhone || null,
+        email: input.email || null,
+        address: input.address || null,
+        source_stream_id: input.sourceStreamId || null,
+        emergency_contact: input.emergencyContact || null,
+        assigned_doctor_id: input.assignedDoctorId || null,
+        status: input.status || null,
+        medical_history: input.medicalHistory
+          ? {
+              allergies: input.medicalHistory.allergies,
+              conditions: input.medicalHistory.conditions,
+              medications: input.medicalHistory.medications,
+              surgeries: input.medicalHistory.surgeries,
+              smoking_status: input.medicalHistory.smokingStatus,
+              additional_notes: input.medicalHistory.additionalNotes,
+            }
+          : null,
+        dental_history: input.dentalHistory
+          ? {
+              previous_treatment: input.dentalHistory.previousTreatment,
+              extractions: input.dentalHistory.extractions,
+              root_canals: input.dentalHistory.rootCanals,
+              gum_problems: input.dentalHistory.gumProblems,
+              sensitivity: input.dentalHistory.sensitivity,
+              other: input.dentalHistory.other,
+            }
+          : null,
+      }),
+    });
+
+    const existing = getLocal<Patient[]>(STORAGE_KEYS.PATIENTS, []);
+    setLocal(
+      STORAGE_KEYS.PATIENTS,
+      existing.map((p) => (p.id === response.id || p.code === response.code ? { ...p, ...response } : p))
+    );
+    return response;
+  } catch {
+    const existing = getLocal<Patient[]>(STORAGE_KEYS.PATIENTS, []);
+    const idx = existing.findIndex((p) => p.code === patientIdentifier || p.id === patientIdentifier);
+    if (idx < 0) throw new Error("Patient not found");
+    const current = existing[idx];
+    const updated: Patient = {
+      ...current,
+      fullName: input.fullName,
+      dob: input.dob || current.dob,
+      age: input.dob ? new Date().getFullYear() - new Date(input.dob).getFullYear() : current.age,
+      gender: input.gender || current.gender,
+      phone: input.phone || current.phone,
+      whatsappPhone: input.whatsappPhone || current.whatsappPhone,
+      email: input.email || current.email,
+      address: input.address || current.address,
+      sourceStreamId: input.sourceStreamId ?? current.sourceStreamId,
+      emergencyContact: input.emergencyContact || current.emergencyContact,
+      medicalAlerts: input.medicalHistory?.allergies
+        ? [`Allergy: ${input.medicalHistory.allergies}`]
+        : current.medicalAlerts,
+      medicalHistory: {
+        allergies: input.medicalHistory?.allergies || current.medicalHistory.allergies,
+        conditions: input.medicalHistory?.conditions
+          ? [input.medicalHistory.conditions]
+          : current.medicalHistory.conditions,
+        medications: input.medicalHistory?.medications || current.medicalHistory.medications,
+        surgeries: input.medicalHistory?.surgeries || current.medicalHistory.surgeries,
+        smokingStatus: asSmokingStatus(
+          input.medicalHistory?.smokingStatus || current.medicalHistory.smokingStatus
+        ),
+        additionalNotes:
+          input.medicalHistory?.additionalNotes ?? current.medicalHistory.additionalNotes,
+      },
+      dentalHistory: {
+        previousTreatment:
+          input.dentalHistory?.previousTreatment || current.dentalHistory.previousTreatment,
+        extractions: input.dentalHistory?.extractions || current.dentalHistory.extractions,
+        rootCanals: input.dentalHistory?.rootCanals || current.dentalHistory.rootCanals,
+        gumProblems: input.dentalHistory?.gumProblems || current.dentalHistory.gumProblems,
+        sensitivity: input.dentalHistory?.sensitivity || current.dentalHistory.sensitivity,
+        lastVisitDate: current.dentalHistory.lastVisitDate,
+      },
+    };
+    const next = [...existing];
+    next[idx] = updated;
+    setLocal(STORAGE_KEYS.PATIENTS, next);
+    return updated;
+  }
+}
+
+export async function deletePatientRecord(
+  patientIdentifier: string
+): Promise<{ id: string; code: string; deleted: boolean }> {
+  try {
+    const response = await apiClient<{ id: string; code: string; deleted: boolean }>(
+      `/patients/${encodeURIComponent(patientIdentifier)}`,
+      { method: "DELETE" }
+    );
+    const existing = getLocal<Patient[]>(STORAGE_KEYS.PATIENTS, []);
+    setLocal(
+      STORAGE_KEYS.PATIENTS,
+      existing.filter((p) => p.id !== response.id && p.code !== response.code && p.code !== patientIdentifier && p.id !== patientIdentifier)
+    );
+    const apts = getLocal<Appointment[]>(STORAGE_KEYS.APPOINTMENTS, []);
+    setLocal(
+      STORAGE_KEYS.APPOINTMENTS,
+      apts.filter((a) => a.patientCode !== response.code && a.patientCode !== patientIdentifier)
+    );
+    return response;
+  } catch (err) {
+    // Production API may not have DELETE yet — deactivate + cancel open bookings.
+    if (err instanceof ApiError && (err.status === 405 || err.status === 404)) {
+      const patient = await fetchPatientById(patientIdentifier);
+      if (!patient) throw err;
+      await updatePatientRecord(patientIdentifier, {
+        fullName: patient.fullName,
+        status: "INACTIVE",
+      });
+      const apts = await fetchAppointments(undefined, {
+        from: new Date().toISOString().slice(0, 10),
+      });
+      await Promise.all(
+        apts
+          .filter(
+            (a) =>
+              (a.patientCode === patient.code || a.patientCode === patientIdentifier) &&
+              (a.status === "PENDING" || a.status === "CONFIRMED")
+          )
+          .map((a) => updateAppointmentStatus(a.id, "CANCELLED", "Patient deleted"))
+      );
+      const existing = getLocal<Patient[]>(STORAGE_KEYS.PATIENTS, []);
+      setLocal(
+        STORAGE_KEYS.PATIENTS,
+        existing.filter((p) => p.id !== patient.id && p.code !== patient.code)
+      );
+      return { id: patient.id, code: patient.code, deleted: true };
+    }
+    if (err instanceof ApiError) throw err;
+    const existing = getLocal<Patient[]>(STORAGE_KEYS.PATIENTS, []);
+    const match = existing.find((p) => p.code === patientIdentifier || p.id === patientIdentifier);
+    if (!match) throw err;
+    setLocal(
+      STORAGE_KEYS.PATIENTS,
+      existing.filter((p) => p.id !== match.id)
+    );
+    const apts = getLocal<Appointment[]>(STORAGE_KEYS.APPOINTMENTS, []);
+    setLocal(
+      STORAGE_KEYS.APPOINTMENTS,
+      apts.filter((a) => a.patientCode !== match.code)
+    );
+    return { id: match.id, code: match.code, deleted: true };
   }
 }
 
@@ -257,6 +434,10 @@ export interface CreateVisitInput {
   procedures: { name: string; toothNumber?: string; costEGP: number }[];
   status?: "Completed" | "Draft";
   paidEGP?: number;
+  caseCostEGP?: number;
+  caseCostNote?: string;
+  sourceStreamId?: string;
+  appointmentId?: string;
 }
 
 function visitPaymentFields(procedures: { costEGP: number }[], paidEGP?: number) {
@@ -272,6 +453,8 @@ function visitPaymentFields(procedures: { costEGP: number }[], paidEGP?: number)
 
 export async function recordClinicalVisit(input: CreateVisitInput): Promise<{ id: string; status: string }> {
   const payment = visitPaymentFields(input.procedures, input.paidEGP);
+  const caseCostEGP = Math.max(0, input.caseCostEGP || 0);
+  const caseCostNote = input.caseCostNote?.trim() || undefined;
   try {
     const response = await apiClient<{ id: string; status: string }>(
       `/patients/${encodeURIComponent(input.patientIdentifier)}/visits`,
@@ -290,16 +473,31 @@ export async function recordClinicalVisit(input: CreateVisitInput): Promise<{ id
           })),
           status: input.status || "Completed",
           paid_egp: payment.paidAmountEGP,
+          case_cost_egp: caseCostEGP,
+          case_cost_note: caseCostNote || null,
+          source_stream_id: input.sourceStreamId || null,
+          appointment_id: input.appointmentId || null,
         }),
       }
     );
+
+    // Keep local appointment cache in sync when visit came from calendar.
+    if (input.appointmentId) {
+      const existingApts = getLocal<Appointment[]>(STORAGE_KEYS.APPOINTMENTS, []);
+      setLocal(
+        STORAGE_KEYS.APPOINTMENTS,
+        existingApts.map((a) =>
+          a.id === input.appointmentId ? { ...a, status: "COMPLETED" as const } : a
+        )
+      );
+    }
 
     // Save locally
     const existing = getLocal<Visit[]>(STORAGE_KEYS.VISITS, []);
     const newVisit: Visit = {
       id: response.id,
       patientId: input.patientIdentifier,
-      doctorName: "Dr. Tarek Omar",
+      doctorName: "Dr. Sayed El-Bahy",
       date: new Date().toISOString().split("T")[0],
       time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       chiefComplaint: input.chiefComplaint || "—",
@@ -316,6 +514,8 @@ export async function recordClinicalVisit(input: CreateVisitInput): Promise<{ id
       doctorNotes: input.doctorNotes || "—",
       prescriptions: input.prescriptions ? [input.prescriptions] : [],
       status: "Completed",
+      caseCostEGP,
+      caseCostNote: caseCostNote || null,
       ...payment,
     };
     setLocal(STORAGE_KEYS.VISITS, [newVisit, ...existing]);
@@ -331,7 +531,7 @@ export async function recordClinicalVisit(input: CreateVisitInput): Promise<{ id
         amountEGP: payment.paidAmountEGP,
         patientName: input.patientIdentifier,
         patientCode: input.patientIdentifier,
-        doctorName: "Dr. Tarek Omar",
+        doctorName: "Dr. Sayed El-Bahy",
         description:
           payment.remainingEGP > 0
             ? `Partial payment ${payment.paidAmountEGP}/${payment.totalCostEGP} EGP: ${procList}`
@@ -342,13 +542,17 @@ export async function recordClinicalVisit(input: CreateVisitInput): Promise<{ id
     }
 
     return response;
-  } catch {
+  } catch (err) {
+    // Server rejected the visit (auth, validation, missing patient) — do not fake success.
+    if (err instanceof ApiError) {
+      throw err;
+    }
     const id = `visit_${Date.now()}`;
     const existing = getLocal<Visit[]>(STORAGE_KEYS.VISITS, []);
     const newVisit: Visit = {
       id,
       patientId: input.patientIdentifier,
-      doctorName: "Dr. Tarek Omar",
+      doctorName: "Dr. Sayed El-Bahy",
       date: new Date().toISOString().split("T")[0],
       time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       chiefComplaint: input.chiefComplaint || "—",
@@ -365,9 +569,21 @@ export async function recordClinicalVisit(input: CreateVisitInput): Promise<{ id
       doctorNotes: input.doctorNotes || "—",
       prescriptions: input.prescriptions ? [input.prescriptions] : [],
       status: "Completed",
+      caseCostEGP,
+      caseCostNote: caseCostNote || null,
       ...payment,
     };
     setLocal(STORAGE_KEYS.VISITS, [newVisit, ...existing]);
+
+    if (input.appointmentId) {
+      const existingApts = getLocal<Appointment[]>(STORAGE_KEYS.APPOINTMENTS, []);
+      setLocal(
+        STORAGE_KEYS.APPOINTMENTS,
+        existingApts.map((a) =>
+          a.id === input.appointmentId ? { ...a, status: "COMPLETED" as const } : a
+        )
+      );
+    }
 
     if (payment.paidAmountEGP > 0) {
       const existingTx = getLocal<FinancialTransaction[]>(STORAGE_KEYS.FINANCIALS, []);
@@ -380,7 +596,7 @@ export async function recordClinicalVisit(input: CreateVisitInput): Promise<{ id
         amountEGP: payment.paidAmountEGP,
         patientName: input.patientIdentifier,
         patientCode: input.patientIdentifier,
-        doctorName: "Dr. Tarek Omar",
+        doctorName: "Dr. Sayed El-Bahy",
         description:
           payment.remainingEGP > 0
             ? `Partial payment ${payment.paidAmountEGP}/${payment.totalCostEGP} EGP: ${procList}`
@@ -397,13 +613,20 @@ export async function recordClinicalVisit(input: CreateVisitInput): Promise<{ id
 export async function recordVisitPayment(
   visitId: string,
   amountEGP: number
-): Promise<{ id: string; totalCostEGP: number; paidAmountEGP: number; remainingEGP: number }> {
+): Promise<{
+  id: string;
+  totalCostEGP: number;
+  paidAmountEGP: number;
+  remainingEGP: number;
+  revenueShare?: RevenueShare;
+}> {
   try {
     const response = await apiClient<{
       id: string;
       totalCostEGP: number;
       paidAmountEGP: number;
       remainingEGP: number;
+      revenueShare?: RevenueShare;
     }>(`/visits/${encodeURIComponent(visitId)}/payments`, {
       method: "POST",
       body: JSON.stringify({ amount_egp: amountEGP }),
@@ -417,6 +640,7 @@ export async function recordVisitPayment(
             totalCostEGP: response.totalCostEGP,
             paidAmountEGP: response.paidAmountEGP,
             remainingEGP: response.remainingEGP,
+            revenueShare: response.revenueShare ?? v.revenueShare,
           }
         : v
     );
@@ -500,16 +724,117 @@ export async function fetchOutstandingVisits(): Promise<Visit[]> {
   });
 }
 
+export async function fetchVisitById(visitId: string): Promise<Visit | null> {
+  try {
+    const data = await apiClient<Visit>(`/visits/${encodeURIComponent(visitId)}`);
+    if (data?.id) return data;
+  } catch {
+    // Fallback
+  }
+  return getLocal<Visit[]>(STORAGE_KEYS.VISITS, []).find((v) => v.id === visitId) || null;
+}
+
+export interface UpdateVisitInput {
+  chiefComplaint?: string;
+  clinicalFindings?: string;
+  diagnosis?: string;
+  doctorNotes?: string;
+  prescriptions?: string;
+  procedures?: { name: string; toothNumber?: string; costEGP: number }[];
+  status?: "Completed" | "Draft" | "Amended";
+  caseCostEGP?: number;
+  caseCostNote?: string | null;
+}
+
+export async function updateClinicalVisit(visitId: string, input: UpdateVisitInput): Promise<Visit> {
+  try {
+    const response = await apiClient<Visit>(`/visits/${encodeURIComponent(visitId)}`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        chief_complaint: input.chiefComplaint,
+        clinical_findings: input.clinicalFindings,
+        diagnosis: input.diagnosis,
+        doctor_notes: input.doctorNotes,
+        prescriptions: input.prescriptions,
+        procedures: input.procedures?.map((p) => ({
+          name: p.name,
+          tooth_number: p.toothNumber || null,
+          cost_egp: p.costEGP || 0,
+        })),
+        status: input.status,
+        case_cost_egp: input.caseCostEGP,
+        case_cost_note: input.caseCostNote,
+      }),
+    });
+
+    const existing = getLocal<Visit[]>(STORAGE_KEYS.VISITS, []);
+    setLocal(
+      STORAGE_KEYS.VISITS,
+      existing.map((v) => (v.id === visitId ? { ...v, ...response } : v))
+    );
+    return response;
+  } catch {
+    const existing = getLocal<Visit[]>(STORAGE_KEYS.VISITS, []);
+    const current = existing.find((v) => v.id === visitId);
+    if (!current) throw new Error("Visit not found");
+    const procedures = input.procedures
+      ? input.procedures.map((p, i) => ({
+          id: `proc_${i}_${Date.now()}`,
+          name: p.name,
+          toothNumber: p.toothNumber || "General",
+          costEGP: p.costEGP,
+          status: "Completed" as const,
+        }))
+      : current.procedures;
+    const totalCostEGP = procedures.reduce((sum, p) => sum + (p.costEGP || 0), 0);
+    const paidAmountEGP = current.paidAmountEGP ?? 0;
+    if (totalCostEGP < paidAmountEGP) {
+      throw new Error("Total cost cannot be less than amount already paid");
+    }
+    const updated: Visit = {
+      ...current,
+      chiefComplaint: input.chiefComplaint ?? current.chiefComplaint,
+      clinicalFindings: input.clinicalFindings ?? current.clinicalFindings,
+      diagnosis: input.diagnosis ?? current.diagnosis,
+      doctorNotes: input.doctorNotes ?? current.doctorNotes,
+      prescriptions: input.prescriptions ? [input.prescriptions] : current.prescriptions,
+      procedures,
+      status: input.status === "Draft" ? "Draft" : "Completed",
+      totalCostEGP,
+      paidAmountEGP,
+      remainingEGP: totalCostEGP - paidAmountEGP,
+      caseCostEGP: input.caseCostEGP ?? current.caseCostEGP ?? 0,
+      caseCostNote:
+        input.caseCostNote !== undefined ? input.caseCostNote : current.caseCostNote,
+    };
+    setLocal(
+      STORAGE_KEYS.VISITS,
+      existing.map((v) => (v.id === visitId ? updated : v))
+    );
+    return updated;
+  }
+}
+
 // -----------------------------
 // APPOINTMENTS API
 // -----------------------------
 
-export async function fetchAppointments(statusFilter?: string): Promise<Appointment[]> {
+export async function fetchAppointments(
+  statusFilter?: string,
+  range?: { from?: string; to?: string }
+): Promise<Appointment[]> {
   try {
-    const endpoint = statusFilter ? `/appointments?status=${statusFilter}` : "/appointments";
-    const data = await apiClient<Appointment[]>(endpoint);
-    if (Array.isArray(data) && data.length > 0) {
-      setLocal(STORAGE_KEYS.APPOINTMENTS, data);
+    const qs = new URLSearchParams();
+    if (statusFilter) qs.set("status", statusFilter);
+    if (range?.from) qs.set("from", range.from);
+    if (range?.to) qs.set("to", range.to);
+    const suffix = qs.toString() ? `?${qs.toString()}` : "";
+    const data = await apiClient<Appointment[]>(`/appointments${suffix}`);
+    if (Array.isArray(data)) {
+      // Only mirror full-ish windows into localStorage so delete fallbacks stay usable.
+      if (!statusFilter && !range?.from && !range?.to) {
+        setLocal(STORAGE_KEYS.APPOINTMENTS, data);
+      }
       return data;
     }
   } catch {
@@ -533,7 +858,7 @@ export async function scheduleAppointment(input: {
       method: "POST",
       body: JSON.stringify({
         patient_id_or_code: input.patientIdOrCode,
-        doctor_name: input.doctorName || "Dr. Tarek Omar",
+        doctor_name: input.doctorName || "Dr. Sayed El-Bahy",
         date: input.date,
         time: input.time,
         procedure: input.procedure || "Clinical Consultation",
@@ -551,7 +876,7 @@ export async function scheduleAppointment(input: {
       patientCode: input.patientIdOrCode,
       patientName: "Scheduled Patient",
       patientPhone: "—",
-      doctorName: input.doctorName || "Dr. Tarek Omar",
+      doctorName: input.doctorName || "Dr. Sayed El-Bahy",
       date: input.date,
       time: input.time,
       durationMinutes: input.durationMinutes || 30,
@@ -562,6 +887,127 @@ export async function scheduleAppointment(input: {
     };
     setLocal(STORAGE_KEYS.APPOINTMENTS, [...existing, newApt]);
     return { id, status: "CONFIRMED" };
+  }
+}
+
+export async function updateAppointmentStatus(
+  appointmentId: string,
+  status: Appointment["status"],
+  reason?: string
+): Promise<{ id: string; status: string }> {
+  try {
+    return await apiClient<{ id: string; status: string }>(
+      `/appointments/${encodeURIComponent(appointmentId)}/status`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ status, reason: reason || null }),
+      }
+    );
+  } catch {
+    const existing = getLocal<Appointment[]>(STORAGE_KEYS.APPOINTMENTS, []);
+    const updated = existing.map((a) =>
+      a.id === appointmentId ? { ...a, status } : a
+    );
+    setLocal(STORAGE_KEYS.APPOINTMENTS, updated);
+    return { id: appointmentId, status };
+  }
+}
+
+export async function deleteAppointment(
+  appointmentId: string
+): Promise<{ id: string; deleted: boolean; status: string }> {
+  try {
+    const response = await apiClient<{ id: string; deleted: boolean; status: string }>(
+      `/appointments/${encodeURIComponent(appointmentId)}`,
+      { method: "DELETE" }
+    );
+    const existing = getLocal<Appointment[]>(STORAGE_KEYS.APPOINTMENTS, []);
+    if (response.deleted) {
+      setLocal(
+        STORAGE_KEYS.APPOINTMENTS,
+        existing.filter((a) => a.id !== appointmentId)
+      );
+    } else {
+      setLocal(
+        STORAGE_KEYS.APPOINTMENTS,
+        existing.map((a) =>
+          a.id === appointmentId ? { ...a, status: "CANCELLED" as Appointment["status"] } : a
+        )
+      );
+    }
+    return response;
+  } catch (err) {
+    // Production API may not have DELETE yet (405) — cancel instead so calendar clears.
+    if (err instanceof ApiError && (err.status === 405 || err.status === 404)) {
+      await updateAppointmentStatus(appointmentId, "CANCELLED", "Deleted from calendar");
+      return { id: appointmentId, deleted: false, status: "CANCELLED" };
+    }
+    if (err instanceof ApiError) throw err;
+    const existing = getLocal<Appointment[]>(STORAGE_KEYS.APPOINTMENTS, []);
+    setLocal(
+      STORAGE_KEYS.APPOINTMENTS,
+      existing.filter((a) => a.id !== appointmentId)
+    );
+    return { id: appointmentId, deleted: true, status: "DELETED" };
+  }
+}
+
+export async function updateAppointment(
+  appointmentId: string,
+  input: {
+    date?: string;
+    time?: string;
+    durationMinutes?: number;
+    procedure?: string;
+    chiefComplaint?: string;
+    location?: string;
+    notes?: string;
+    doctorName?: string;
+  }
+): Promise<Appointment> {
+  try {
+    const response = await apiClient<Appointment>(
+      `/appointments/${encodeURIComponent(appointmentId)}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({
+          date: input.date,
+          time: input.time,
+          duration_minutes: input.durationMinutes,
+          procedure: input.procedure,
+          chief_complaint: input.chiefComplaint,
+          location: input.location,
+          notes: input.notes,
+          doctor_name: input.doctorName,
+        }),
+      }
+    );
+    const existing = getLocal<Appointment[]>(STORAGE_KEYS.APPOINTMENTS, []);
+    setLocal(
+      STORAGE_KEYS.APPOINTMENTS,
+      existing.map((a) => (a.id === appointmentId ? { ...a, ...response } : a))
+    );
+    return response;
+  } catch {
+    const existing = getLocal<Appointment[]>(STORAGE_KEYS.APPOINTMENTS, []);
+    const current = existing.find((a) => a.id === appointmentId);
+    if (!current) throw new Error("Appointment not found");
+    const updated: Appointment = {
+      ...current,
+      date: input.date || current.date,
+      time: input.time || current.time,
+      durationMinutes: input.durationMinutes ?? current.durationMinutes,
+      procedure: input.procedure || current.procedure,
+      chiefComplaint: input.chiefComplaint ?? current.chiefComplaint,
+      location: input.location || current.location,
+      notes: input.notes ?? current.notes,
+      doctorName: input.doctorName || current.doctorName,
+    };
+    setLocal(
+      STORAGE_KEYS.APPOINTMENTS,
+      existing.map((a) => (a.id === appointmentId ? updated : a))
+    );
+    return updated;
   }
 }
 
@@ -580,6 +1026,43 @@ export async function fetchFinancialTransactions(): Promise<FinancialTransaction
     // Fallback
   }
   return getLocal<FinancialTransaction[]>(STORAGE_KEYS.FINANCIALS, []);
+}
+
+export async function fetchFinancialSummary(): Promise<FinancialSummary | null> {
+  try {
+    return await apiClient<FinancialSummary>("/financials/summary");
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchDashboardOverview(): Promise<DashboardOverview | null> {
+  try {
+    return await apiClient<DashboardOverview>("/dashboard/overview");
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchReportsAnalytics(params?: {
+  preset?: "week" | "month" | "quarter" | "year" | "custom";
+  from?: string;
+  to?: string;
+  streamId?: string;
+  doctorId?: string;
+}): Promise<ReportAnalytics | null> {
+  try {
+    const qs = new URLSearchParams();
+    if (params?.preset && params.preset !== "custom") qs.set("preset", params.preset);
+    if (params?.from) qs.set("from", params.from);
+    if (params?.to) qs.set("to", params.to);
+    if (params?.streamId) qs.set("stream_id", params.streamId);
+    if (params?.doctorId) qs.set("doctor_id", params.doctorId);
+    const suffix = qs.toString() ? `?${qs.toString()}` : "";
+    return await apiClient<ReportAnalytics>(`/reports/analytics${suffix}`);
+  } catch {
+    return null;
+  }
 }
 
 export async function fetchFinancialCategories(
@@ -662,11 +1145,58 @@ export async function postFinancialTransaction(input: {
       amountEGP: input.amountEGP,
       patientName: input.patientIdOrCode ? "Patient" : undefined,
       patientCode: input.patientIdOrCode,
-      doctorName: "Dr. Tarek Omar",
+      doctorName: "Dr. Sayed El-Bahy",
       description: input.description,
       status: "POSTED",
+      isManual: true,
     };
     setLocal(STORAGE_KEYS.FINANCIALS, [newTx, ...existing]);
+    return { id, status: "POSTED" };
+  }
+}
+
+export async function updateFinancialTransaction(
+  id: string,
+  input: {
+    type?: "REVENUE" | "EXPENSE";
+    amountEGP?: number;
+    description?: string;
+    categoryId?: string;
+    categoryName?: string;
+    effectiveOn?: string;
+  }
+): Promise<{ id: string; status: string }> {
+  try {
+    return await apiClient<{ id: string; status: string }>(`/financials/transactions/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        type: input.type ?? null,
+        amount_egp: input.amountEGP ?? null,
+        description: input.description ?? null,
+        category_id: input.categoryId ?? null,
+        category_name: input.categoryName ?? null,
+        effective_on: input.effectiveOn ?? null,
+      }),
+    });
+  } catch (error) {
+    const existing = getLocal<FinancialTransaction[]>(STORAGE_KEYS.FINANCIALS, []);
+    const idx = existing.findIndex((tx) => tx.id === id);
+    if (idx < 0) throw error;
+    const current = existing[idx];
+    if (current.isManual === false) throw error;
+    const updated: FinancialTransaction = {
+      ...current,
+      type: input.type ?? current.type,
+      amountEGP: input.amountEGP ?? current.amountEGP,
+      description: input.description ?? current.description,
+      category: input.categoryName ?? current.category,
+      categoryId: input.categoryId ?? current.categoryId,
+      date: input.effectiveOn ?? current.date,
+      isManual: true,
+    };
+    const next = [...existing];
+    next[idx] = updated;
+    setLocal(STORAGE_KEYS.FINANCIALS, next);
     return { id, status: "POSTED" };
   }
 }
@@ -675,7 +1205,12 @@ export async function fetchCaseStreams(includeInactive = false): Promise<CaseStr
   try {
     const endpoint = includeInactive ? "/case-streams?include_inactive=true" : "/case-streams";
     const data = await apiClient<CaseStream[]>(endpoint);
-    if (Array.isArray(data)) return data;
+    if (Array.isArray(data)) {
+      return data.map((s) => ({
+        ...s,
+        referralPercent: s.referralPercent ?? 0,
+      }));
+    }
   } catch {
     // Fallback
   }
@@ -685,19 +1220,21 @@ export async function fetchCaseStreams(includeInactive = false): Promise<CaseStr
 export async function createCaseStream(input: {
   nameEn: string;
   nameAr?: string;
+  referralPercent?: number;
 }): Promise<CaseStream> {
   return apiClient<CaseStream>("/case-streams", {
     method: "POST",
     body: JSON.stringify({
       name_en: input.nameEn,
       name_ar: input.nameAr || null,
+      referral_percent: input.referralPercent ?? 0,
     }),
   });
 }
 
 export async function updateCaseStream(
   id: string,
-  input: { nameEn?: string; nameAr?: string; isActive?: boolean }
+  input: { nameEn?: string; nameAr?: string; isActive?: boolean; referralPercent?: number }
 ): Promise<CaseStream> {
   return apiClient<CaseStream>(`/case-streams/${id}`, {
     method: "PATCH",
@@ -705,6 +1242,7 @@ export async function updateCaseStream(
       name_en: input.nameEn,
       name_ar: input.nameAr,
       is_active: input.isActive,
+      referral_percent: input.referralPercent,
     }),
   });
 }
@@ -726,7 +1264,7 @@ export async function fetchDoctors(): Promise<Doctor[]> {
     {
       id: "doc-1",
       code: "DOC-DR-001",
-      name: "Dr. Tarek Omar",
+      name: "Dr. Sayed El-Bahy",
       specialization: "Endodontics & Aesthetic Dentistry",
       phone: "+20 100 123 4567",
       activePatients: 0,

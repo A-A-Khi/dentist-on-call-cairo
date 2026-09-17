@@ -37,6 +37,7 @@ export default function SettingsPage() {
   const [catNameAr, setCatNameAr] = useState("");
   const [streamNameEn, setStreamNameEn] = useState("");
   const [streamNameAr, setStreamNameAr] = useState("");
+  const [streamReferralPercent, setStreamReferralPercent] = useState(0);
   const [taxonomyError, setTaxonomyError] = useState<string | null>(null);
   const [taxonomyBusy, setTaxonomyBusy] = useState(false);
 
@@ -107,9 +108,11 @@ export default function SettingsPage() {
       await createCaseStream({
         nameEn: streamNameEn.trim(),
         nameAr: streamNameAr.trim() || undefined,
+        referralPercent: Math.max(0, Math.min(50, streamReferralPercent || 0)),
       });
       setStreamNameEn("");
       setStreamNameAr("");
+      setStreamReferralPercent(0);
       await loadTaxonomies();
     } catch {
       setTaxonomyError(isAr ? "تعذر إضافة قناة الحالات." : "Could not add case stream.");
@@ -202,16 +205,17 @@ export default function SettingsPage() {
                         <Badge variant={cat.transactionType === "REVENUE" ? "green" : "blue"} size="sm">
                           {cat.transactionType}
                         </Badge>
-                        <button
+                        <Button
                           type="button"
-                          className="text-[11px] font-semibold text-secondary hover:text-primary"
+                          variant="ghost"
+                          size="xs"
                           onClick={async () => {
                             await updateFinancialCategory(cat.id, { isActive: !cat.isActive });
                             await loadTaxonomies();
                           }}
                         >
                           {cat.isActive ? (isAr ? "تعطيل" : "Deactivate") : isAr ? "تفعيل" : "Activate"}
-                        </button>
+                        </Button>
                       </div>
                     </li>
                   ))
@@ -227,7 +231,7 @@ export default function SettingsPage() {
                 <p className="text-[11px] text-muted mt-1">{dict.settings.streamsHelp}</p>
               </div>
 
-              <form onSubmit={handleAddStream} className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+              <form onSubmit={handleAddStream} className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
                 <Input
                   label={isAr ? "الاسم (إنجليزي)" : "Name (English)"}
                   value={streamNameEn}
@@ -241,10 +245,20 @@ export default function SettingsPage() {
                   onChange={(e) => setStreamNameAr(e.target.value)}
                   placeholder="مثل: عيادات شريكة"
                 />
+                <Input
+                  label={dict.settings.referralPercent}
+                  type="number"
+                  min={0}
+                  max={50}
+                  value={streamReferralPercent}
+                  onChange={(e) => setStreamReferralPercent(Number(e.target.value) || 0)}
+                  placeholder="0"
+                />
                 <Button type="submit" variant="primary" disabled={taxonomyBusy}>
                   {isAr ? "إضافة قناة" : "Add Stream"}
                 </Button>
               </form>
+              <p className="text-[10px] text-muted">{dict.settings.referralPercentHelp}</p>
             </div>
 
             <div className="glass-card rounded-2xl overflow-hidden">
@@ -258,7 +272,7 @@ export default function SettingsPage() {
                   <li className="p-4 text-xs text-muted">{isAr ? "لا توجد قنوات بعد." : "No case streams yet."}</li>
                 ) : (
                   streams.map((stream) => (
-                    <li key={stream.id} className="px-4 py-3 flex items-center justify-between gap-3 text-xs">
+                    <li key={stream.id} className="px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
                       <div className="min-w-0">
                         <div className="font-semibold text-primary truncate">
                           {isAr && stream.nameAr ? stream.nameAr : stream.nameEn}
@@ -267,20 +281,38 @@ export default function SettingsPage() {
                           <div className="text-[10px] text-muted">{stream.nameAr}</div>
                         )}
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
+                      <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                        <label className="flex items-center gap-1.5 text-[11px] text-secondary">
+                          <span>{dict.settings.referralPercent}</span>
+                          <input
+                            type="number"
+                            min={0}
+                            max={50}
+                            defaultValue={stream.referralPercent ?? 0}
+                            key={`${stream.id}-${stream.referralPercent}`}
+                            className="w-16 glass rounded-lg px-2 py-1 font-mono text-primary focus:border-[#caa95a] focus:outline-none"
+                            onBlur={async (e) => {
+                              const next = Math.max(0, Math.min(50, Number(e.target.value) || 0));
+                              if (next === (stream.referralPercent ?? 0)) return;
+                              await updateCaseStream(stream.id, { referralPercent: next });
+                              await loadTaxonomies();
+                            }}
+                          />
+                        </label>
                         <Badge variant={stream.isActive ? "green" : "blue"} size="sm">
                           {stream.isActive ? (isAr ? "نشط" : "Active") : isAr ? "معطل" : "Inactive"}
                         </Badge>
-                        <button
+                        <Button
                           type="button"
-                          className="text-[11px] font-semibold text-secondary hover:text-primary"
+                          variant="ghost"
+                          size="xs"
                           onClick={async () => {
                             await updateCaseStream(stream.id, { isActive: !stream.isActive });
                             await loadTaxonomies();
                           }}
                         >
                           {stream.isActive ? (isAr ? "تعطيل" : "Deactivate") : isAr ? "تفعيل" : "Activate"}
-                        </button>
+                        </Button>
                       </div>
                     </li>
                   ))

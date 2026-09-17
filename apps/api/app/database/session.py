@@ -38,7 +38,11 @@ def get_engine_url(raw_url: str) -> str:
                 user = f"postgres.{ref}"
 
         encoded_pwd = urllib.parse.quote(urllib.parse.unquote(pwd), safe="")
-        return f"postgresql+psycopg://{user}:{encoded_pwd}@{host_part}"
+        url = f"postgresql+psycopg://{user}:{encoded_pwd}@{host_part}"
+        # Require TLS for non-local Postgres unless the URL already sets sslmode.
+        if "sslmode=" not in url.lower() and "localhost" not in url and "127.0.0.1" not in url:
+            url = f"{url}&sslmode=require" if "?" in url else f"{url}?sslmode=require"
+        return url
 
     return clean_url
 

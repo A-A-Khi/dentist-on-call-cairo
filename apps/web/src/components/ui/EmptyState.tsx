@@ -1,6 +1,5 @@
 import React from "react";
-import Link from "next/link";
-import { Button } from "./Button";
+import { Button, ButtonLink } from "./Button";
 
 export interface EmptyStateProps {
   icon?: React.ReactNode;
@@ -39,9 +38,9 @@ export function EmptyState({
       {showAction && (
         <div className="mt-5">
           {actionHref ? (
-            <Link href={actionHref} className="btn-gold">
+            <ButtonLink href={actionHref} variant="primary" size="sm">
               {actionLabel}
-            </Link>
+            </ButtonLink>
           ) : (
             <Button variant="primary" size="sm" onClick={onAction}>
               {actionLabel}

@@ -9,6 +9,7 @@ from sqlalchemy import (
     DateTime,
     Enum,
     ForeignKey,
+    Integer,
     String,
     Text,
     UniqueConstraint,
@@ -85,7 +86,11 @@ class FinancialCategory(UUIDPrimaryKeyMixin, OrganizationScopedMixin, TimestampM
 
 
 class CaseStream(UUIDPrimaryKeyMixin, OrganizationScopedMixin, TimestampMixin, Base):
-    """Acquisition / referral stream a registered case came from."""
+    """Acquisition / referral stream a registered case came from.
+
+    referral_percent is the admin-configured share for that referrer
+    (clinic / hospital / partner). Applied to future cases from this stream.
+    """
 
     __tablename__ = "case_streams"
     __table_args__ = (UniqueConstraint("organization_id", "name_en", name="uq_case_streams_organization_name_en"),)
@@ -93,6 +98,8 @@ class CaseStream(UUIDPrimaryKeyMixin, OrganizationScopedMixin, TimestampMixin, B
     name_en: Mapped[str] = mapped_column(String(160), nullable=False)
     name_ar: Mapped[str | None] = mapped_column(String(160))
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    # 0–50: leaves room for fixed doctor 35% + assistant 15%
+    referral_percent: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
 
 class FinancialTransaction(UUIDPrimaryKeyMixin, OrganizationScopedMixin, TimestampMixin, Base):

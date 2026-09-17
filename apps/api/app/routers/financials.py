@@ -11,7 +11,8 @@ from app.models.audit import AuditLog
 from app.models.enums import TransactionStatus, TransactionType, UserRole
 from app.models.identity import DoctorProfile, User
 from app.models.operations import FinancialCategory, FinancialTransaction
-from app.models.patients import Patient
+from app.models.patients import Patient, Visit
+from app.services.revenue_split import allocate_egp, split_basis_egp
 
 router = APIRouter(prefix="/financials", tags=["financials"])
 
@@ -35,6 +36,15 @@ class TransactionCreateRequest(BaseModel):
     amount_egp: int = Field(..., gt=0)
     description: str | None = None
     patient_id_or_code: str | None = None
+
+
+class TransactionUpdateRequest(BaseModel):
+    type: str | None = None  # REVENUE or EXPENSE
+    category_id: UUID | None = None
+    category_name: str | None = None
+    amount_egp: int | None = Field(None, gt=0)
+    description: str | None = None
+    effective_on: date | None = None
 
 
 def _parse_tx_type(raw: str) -> TransactionType:
@@ -95,7 +105,7 @@ def _resolve_category(
     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="category_id or category_name is required.")
 
 
-@router.get("/categories")
+@router.get("/categories", dependencies=[Depends(require_roles(UserRole.ADMIN))])
 def list_categories(
     current_user: CurrentUser,
     session: DatabaseSession,
@@ -177,20 +187,28 @@ def update_category(
     return _category_payload(category)
 
 
-@router.get("/transactions")
+@router.get("/transactions", dependencies=[Depends(require_roles(UserRole.ADMIN))])
 def list_transactions(
     current_user: CurrentUser,
     session: DatabaseSession,
 ) -> list[dict[str, Any]]:
     query = (
         select(FinancialTransaction)
-        .where(FinancialTransaction.organization_id == current_user.organization_id)
+        .where(
+            FinancialTransaction.organization_id == current_user.organization_id,
+            FinancialTransaction.status == TransactionStatus.POSTED,
+        )
         .order_by(FinancialTransaction.created_at.desc())
     )
     transactions = session.scalars(query).all()
 
     result: list[dict[str, Any]] = []
     for tx in transactions:
+        if tx.patient_id:
+            p = session.get(Patient, tx.patient_id)
+            if p is not None and p.deleted_at is not None:
+                continue
+
         category = session.get(FinancialCategory, tx.category_id)
         category_name = category.name_en if category else "General"
 
@@ -210,6 +228,7 @@ def list_transactions(
                 if du:
                     doctor_name = du.display_name
 
+        is_manual = tx.visit_id is None
         result.append(
             {
                 "id": str(tx.id),
@@ -223,13 +242,106 @@ def list_transactions(
                 "doctorName": doctor_name,
                 "description": tx.description or "Transaction",
                 "status": tx.status.value,
+                "visitId": str(tx.visit_id) if tx.visit_id else None,
+                "isManual": is_manual,
             }
         )
 
     return result
 
 
-@router.post("/transactions", dependencies=[Depends(require_csrf)], status_code=status.HTTP_201_CREATED)
+@router.get("/summary", dependencies=[Depends(require_roles(UserRole.ADMIN))])
+def financial_summary(
+    current_user: CurrentUser,
+    session: DatabaseSession,
+) -> dict[str, Any]:
+    """Clinic P&L using case revenue split (doctor / assistant / referrer / org)."""
+    visits = session.scalars(
+        select(Visit)
+        .join(Patient, Patient.id == Visit.patient_id)
+        .where(
+            Visit.organization_id == current_user.organization_id,
+            Visit.paid_amount_minor > 0,
+            Patient.deleted_at.is_(None),
+        )
+    ).all()
+
+    gross_collected = 0
+    total_case_costs = 0
+    doctor_share = 0
+    assistant_share = 0
+    referral_share = 0
+    clinic_share = 0
+
+    for visit in visits:
+        paid_egp = (visit.paid_amount_minor or 0) // 100
+        if paid_egp <= 0:
+            continue
+        case_cost_egp = (visit.case_cost_minor or 0) // 100
+        basis_egp = split_basis_egp(paid_egp, case_cost_egp)
+        amounts = allocate_egp(
+            basis_egp,
+            {
+                "doctor": visit.doctor_share_percent,
+                "assistant": visit.assistant_share_percent,
+                "referral": visit.referral_share_percent,
+                "org": visit.org_share_percent,
+            },
+        )
+        gross_collected += paid_egp
+        total_case_costs += case_cost_egp
+        doctor_share += amounts["doctor"]
+        assistant_share += amounts["assistant"]
+        referral_share += amounts["referral"]
+        clinic_share += amounts["org"]
+
+    # Manual ledger revenue (not tied to a visit) counts fully as clinic income.
+    manual_revenue_txs = session.scalars(
+        select(FinancialTransaction).where(
+            FinancialTransaction.organization_id == current_user.organization_id,
+            FinancialTransaction.type == TransactionType.REVENUE,
+            FinancialTransaction.status == TransactionStatus.POSTED,
+            FinancialTransaction.visit_id.is_(None),
+        )
+    ).all()
+    manual_revenue = sum(tx.amount_minor // 100 for tx in manual_revenue_txs)
+    clinic_share += manual_revenue
+    gross_collected += manual_revenue
+
+    expense_txs = session.scalars(
+        select(FinancialTransaction).where(
+            FinancialTransaction.organization_id == current_user.organization_id,
+            FinancialTransaction.type == TransactionType.EXPENSE,
+            FinancialTransaction.status == TransactionStatus.POSTED,
+        )
+    ).all()
+    total_expenses = sum(tx.amount_minor // 100 for tx in expense_txs)
+
+    paid_visit_count = sum(1 for v in visits if (v.paid_amount_minor or 0) > 0)
+    avg_case = round(gross_collected / paid_visit_count) if paid_visit_count else 0
+    net_clinic_profit = clinic_share - total_expenses
+
+    return {
+        "grossCollectedEGP": gross_collected,
+        "caseCostsEGP": total_case_costs,
+        "splitBasisEGP": max(0, gross_collected - manual_revenue - total_case_costs),
+        "doctorShareEGP": doctor_share,
+        "assistantShareEGP": assistant_share,
+        "referralShareEGP": referral_share,
+        "clinicShareEGP": clinic_share,
+        "manualRevenueEGP": manual_revenue,
+        "totalExpensesEGP": total_expenses,
+        "netClinicProfitEGP": net_clinic_profit,
+        "paidVisitCount": paid_visit_count,
+        "avgCaseEGP": avg_case,
+    }
+
+
+@router.post(
+    "/transactions",
+    dependencies=[Depends(require_csrf), Depends(require_roles(UserRole.ADMIN))],
+    status_code=status.HTTP_201_CREATED,
+)
 def create_transaction(
     payload: TransactionCreateRequest,
     current_user: CurrentUser,
@@ -300,7 +412,118 @@ def create_transaction(
     }
 
 
-@router.post("/transactions/{transaction_id}/reverse", dependencies=[Depends(require_csrf)])
+@router.patch(
+    "/transactions/{transaction_id}",
+    dependencies=[Depends(require_csrf), Depends(require_roles(UserRole.ADMIN))],
+)
+def update_transaction(
+    transaction_id: UUID,
+    payload: TransactionUpdateRequest,
+    current_user: CurrentUser,
+    session: DatabaseSession,
+) -> dict[str, Any]:
+    tx = session.get(FinancialTransaction, transaction_id)
+    if tx is None or tx.organization_id != current_user.organization_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found.")
+
+    if tx.status != TransactionStatus.POSTED:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only posted transactions can be edited.")
+
+    if tx.visit_id is not None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Visit-linked revenue cannot be edited here. Update the visit payment instead.",
+        )
+
+    before = {
+        "type": tx.type.value,
+        "amount_egp": tx.amount_minor // 100,
+        "category_id": str(tx.category_id),
+        "description": tx.description,
+        "effective_on": tx.effective_on.isoformat(),
+    }
+
+    tx_type = tx.type
+    if payload.type is not None:
+        tx_type = _parse_tx_type(payload.type)
+        tx.type = tx_type
+
+    category_changed = payload.category_id is not None or (
+        payload.category_name is not None and payload.category_name.strip() != ""
+    )
+    type_changed = payload.type is not None and tx_type != TransactionType(before["type"])
+    if category_changed or type_changed:
+        category = _resolve_category(
+            session=session,
+            organization_id=current_user.organization_id,
+            tx_type=tx_type,
+            category_id=payload.category_id,
+            category_name=payload.category_name,
+        )
+        tx.category_id = category.id
+    else:
+        category = session.get(FinancialCategory, tx.category_id)
+        if category is None or category.transaction_type != tx_type:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Choose a category that matches the transaction type.",
+            )
+
+    if payload.amount_egp is not None:
+        tx.amount_minor = payload.amount_egp * 100
+
+    if payload.description is not None:
+        cleaned = payload.description.strip()
+        tx.description = cleaned or f"Manual {tx_type.value} entry"
+
+    if payload.effective_on is not None:
+        tx.effective_on = payload.effective_on
+
+    amount_egp = tx.amount_minor // 100
+    category_name = category.name_en if category else "General"
+
+    audit = AuditLog(
+        id=uuid4(),
+        organization_id=current_user.organization_id,
+        actor_user_id=current_user.user_id,
+        actor_role=current_user.role.value,
+        action="TRANSACTION_UPDATED",
+        target_type="financial_transactions",
+        target_id=tx.id,
+        description=f"Updated {tx_type.value} of {amount_egp} EGP ({category_name})",
+        occurred_at=datetime.now(UTC),
+        metadata_json={
+            "before": before,
+            "after": {
+                "type": tx.type.value,
+                "amount_egp": amount_egp,
+                "category_id": str(tx.category_id),
+                "category": category_name,
+                "description": tx.description,
+                "effective_on": tx.effective_on.isoformat(),
+            },
+        },
+    )
+    session.add(audit)
+    session.commit()
+
+    return {
+        "id": str(tx.id),
+        "status": tx.status.value,
+        "type": tx.type.value,
+        "amountEGP": amount_egp,
+        "category": category_name,
+        "categoryId": str(tx.category_id),
+        "description": tx.description,
+        "date": tx.effective_on.isoformat(),
+        "isManual": True,
+    }
+
+
+@router.post(
+    "/transactions/{transaction_id}/reverse",
+    dependencies=[Depends(require_csrf), Depends(require_roles(UserRole.ADMIN))],
+)
 def reverse_transaction(
     transaction_id: UUID,
     current_user: CurrentUser,

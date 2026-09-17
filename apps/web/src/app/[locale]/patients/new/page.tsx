@@ -8,7 +8,7 @@ import { PageHeader } from "../../../../components/layout/PageHeader";
 import { Breadcrumb } from "../../../../components/layout/Breadcrumb";
 import { Input } from "../../../../components/ui/Input";
 import { Textarea } from "../../../../components/ui/Textarea";
-import { Button } from "../../../../components/ui/Button";
+import { Button, ButtonLink } from "../../../../components/ui/Button";
 import { createPatientRecord, fetchCaseStreams } from "../../../../lib/clinical-api";
 import { getDictionarySync } from "../../../../i18n/get-dictionary";
 import type { CaseStream } from "../../../../lib/clinical-data";
@@ -112,12 +112,9 @@ export default function NewPatientPage() {
           title={dict.patientNew.title}
           subtitle={dict.patientNew.subtitle}
           actions={
-            <Link
-              href={`/${locale}/patients`}
-              className="glass rounded-xl px-3.5 py-2 text-xs font-medium text-secondary hover:text-primary transition-colors"
-            >
+            <ButtonLink href={`/${locale}/patients`} variant="secondary" size="sm">
               {dict.patientNew.cancelButton}
-            </Link>
+            </ButtonLink>
           }
         />
 
@@ -295,12 +292,9 @@ export default function NewPatientPage() {
           </div>
 
           <div className="flex items-center justify-end gap-3 pt-2">
-            <Link
-              href={`/${locale}/patients`}
-              className="glass rounded-xl px-5 py-2.5 text-xs font-semibold text-secondary hover:text-primary transition-colors"
-            >
+            <ButtonLink href={`/${locale}/patients`} variant="secondary" size="md">
               {dict.patientNew.cancelButton}
-            </Link>
+            </ButtonLink>
             <Button variant="primary" size="md" type="submit" disabled={isSubmitting}>
               {isSubmitting
                 ? isAr

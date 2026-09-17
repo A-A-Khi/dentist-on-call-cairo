@@ -1,26 +1,35 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { AppShell } from "../../../../components/layout/AppShell";
 import { Breadcrumb } from "../../../../components/layout/Breadcrumb";
 import { Badge } from "../../../../components/ui/Badge";
+import { Button, ButtonLink } from "../../../../components/ui/Button";
+import { Modal } from "../../../../components/ui/Modal";
 import { Tabs } from "../../../../components/ui/Tabs";
 import { getDictionarySync } from "../../../../i18n/get-dictionary";
-import { fetchPatientById, fetchPatientVisits, recordVisitPayment } from "../../../../lib/clinical-api";
+import {
+  deletePatientRecord,
+  fetchPatientById,
+  fetchPatientVisits,
+  recordVisitPayment,
+} from "../../../../lib/clinical-api";
 import type { Patient, Visit } from "../../../../lib/clinical-data";
+import { getStoredSessionUser } from "../../../../lib/session";
 
 function visitMoney(v: Visit) {
   const total =
-    v.totalCostEGP ?? v.procedures.reduce((sum, p) => sum + (p.costEGP || 0), 0);
-  const paid = v.paidAmountEGP ?? total;
+    v.totalCostEGP ??
+    v.procedures.reduce((sum, p) => sum + (typeof p.costEGP === "number" ? p.costEGP : 0), 0);
+  const paid = v.paidAmountEGP ?? 0;
   const remaining = v.remainingEGP ?? Math.max(total - paid, 0);
   return { total, paid, remaining };
 }
 
 export default function PatientProfilePage() {
   const params = useParams();
+  const router = useRouter();
   const locale = (params?.locale as string) || "en";
   const dict = getDictionarySync(locale);
   const t = dict.patientProfile;
@@ -34,6 +43,14 @@ export default function PatientProfilePage() {
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [isPaying, setIsPaying] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(true);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+
+  useEffect(() => {
+    setIsAdmin((getStoredSessionUser()?.role ?? "ADMIN") === "ADMIN");
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -85,6 +102,7 @@ export default function PatientProfilePage() {
                 totalCostEGP: updated.totalCostEGP,
                 paidAmountEGP: updated.paidAmountEGP,
                 remainingEGP: updated.remainingEGP,
+                revenueShare: updated.revenueShare ?? v.revenueShare,
               }
             : v
         )
@@ -97,6 +115,19 @@ export default function PatientProfilePage() {
       setIsPaying(false);
     }
   };
+
+  async function confirmDeletePatient() {
+    if (!patient || !isAdmin) return;
+    setIsDeleting(true);
+    setDeleteError("");
+    try {
+      await deletePatientRecord(patient.code);
+      router.push(`/${locale}/patients`);
+    } catch {
+      setDeleteError(t.deleteFailed);
+      setIsDeleting(false);
+    }
+  }
 
   const tabs = [
     { id: "overview", label: t.tabs.overview },
@@ -126,9 +157,9 @@ export default function PatientProfilePage() {
         <div className="glass-card rounded-2xl border-dashed p-12 text-center space-y-3">
           <p className="text-sm font-semibold text-primary">{t.notFound}</p>
           <p className="text-xs text-secondary">{t.notFoundDescription}</p>
-          <Link href={`/${locale}/patients`} className="inline-flex btn-gold mt-2">
+          <ButtonLink href={`/${locale}/patients`} variant="primary" size="sm" className="mt-2">
             {dict.nav.patients}
-          </Link>
+          </ButtonLink>
         </div>
       </AppShell>
     );
@@ -212,26 +243,49 @@ export default function PatientProfilePage() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5 pt-2 md:pt-0">
-            <Link
-              href={`/${locale}/patients/${patient.code}/visit/new`}
-              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#dfbf70] via-[#caa95a] to-[#99782a] px-4 py-2.5 text-xs font-bold text-on-gold shadow-lg shadow-[#caa95a]/25 hover:opacity-95 transition-all"
+          <div className="flex flex-wrap items-center gap-2 pt-2 md:pt-0 md:justify-end">
+            <ButtonLink
+              href={`/${locale}/calendar?bookPatient=${encodeURIComponent(patient.code)}`}
+              variant="primary"
+              size="sm"
+              className="whitespace-nowrap"
             >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
-              </svg>
-              <span>{t.startVisit}</span>
-            </Link>
-
-            <Link
-              href={`/${locale}/calendar`}
-              className="inline-flex items-center gap-1.5 glass rounded-xl px-3.5 py-2.5 text-xs font-medium text-primary hover:bg-slate-100 transition-colors"
-            >
-              <svg className="h-4 w-4 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
               <span>{t.scheduleAppointment}</span>
-            </Link>
+            </ButtonLink>
+
+            {isAdmin && (
+              <>
+                <ButtonLink
+                  href={`/${locale}/patients/${patient.code}/edit`}
+                  variant="secondary"
+                  size="sm"
+                  className="whitespace-nowrap"
+                >
+                  <svg className="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  <span>{t.editDemographics}</span>
+                </ButtonLink>
+                <Button
+                  type="button"
+                  variant="danger-soft"
+                  size="sm"
+                  className="whitespace-nowrap"
+                  onClick={() => {
+                    setDeleteError("");
+                    setConfirmDeleteOpen(true);
+                  }}
+                >
+                  <svg className="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  <span>{t.deletePatient}</span>
+                </Button>
+              </>
+            )}
           </div>
         </div>
 
@@ -468,16 +522,34 @@ export default function PatientProfilePage() {
                 className="glass-card rounded-2xl p-5 sm:p-6 space-y-4 shadow-md"
               >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b glass-divider/60 gap-2">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 flex-wrap">
                     <span className="font-bold text-sm text-primary">{v.date}</span>
                     {v.time && <span className="text-xs text-secondary font-mono">{v.time}</span>}
                     <Badge variant="green" size="sm">{v.status}</Badge>
+                    <Badge variant="gold" size="sm">
+                      {t.visitSource}: {v.sourceStream || "Dentist on Call"}
+                    </Badge>
                   </div>
-                  {v.doctorName && (
-                    <span className="text-xs text-gold font-medium">
-                      {t.doctor}: {v.doctorName}
-                    </span>
-                  )}
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    {v.doctorName && (
+                      <span className="text-xs text-gold font-medium whitespace-nowrap">
+                        {t.doctor}: {v.doctorName}
+                      </span>
+                    )}
+                    {isAdmin && (
+                      <ButtonLink
+                        href={`/${locale}/patients/${patient.code}/visit/${v.id}/edit`}
+                        variant="secondary"
+                        size="sm"
+                        className="whitespace-nowrap"
+                      >
+                        <svg className="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                        <span>{t.editVisit}</span>
+                      </ButtonLink>
+                    )}
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
@@ -495,9 +567,11 @@ export default function PatientProfilePage() {
                   <div className="glass rounded-xl p-3.5 space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-semibold text-gold block">{t.procedures}</span>
-                      <span className="font-mono text-xs font-bold text-gold">
-                        {visitMoney(v).total.toLocaleString()} {t.currency}
-                      </span>
+                      {isAdmin ? (
+                        <span className="font-mono text-xs font-bold text-gold">
+                          {visitMoney(v).total.toLocaleString()} {t.currency}
+                        </span>
+                      ) : null}
                     </div>
                     <div className="divide-y divide-slate-200 text-xs">
                       {v.procedures.map((p) => (
@@ -511,14 +585,16 @@ export default function PatientProfilePage() {
                             )}
                             {p.notes && <p className="text-[11px] text-secondary mt-0.5">{p.notes}</p>}
                           </div>
-                          <span className="font-mono font-bold text-emerald-600 shrink-0 ms-4">
-                            {(p.costEGP || 0).toLocaleString()} {t.currency}
-                          </span>
+                          {isAdmin && typeof p.costEGP === "number" ? (
+                            <span className="font-mono font-bold text-emerald-600 shrink-0 ms-4">
+                              {p.costEGP.toLocaleString()} {t.currency}
+                            </span>
+                          ) : null}
                         </div>
                       ))}
                     </div>
 
-                    {(() => {
+                    {isAdmin ? (() => {
                       const money = visitMoney(v);
                       return (
                         <div className="pt-2 border-t glass-divider/60 space-y-2">
@@ -562,49 +638,120 @@ export default function PatientProfilePage() {
                                 {paymentError && (
                                   <p className="text-[11px] text-rose-600">{paymentError}</p>
                                 )}
-                                <div className="flex gap-2">
-                                  <button
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <Button
                                     type="button"
+                                    variant="primary"
+                                    size="sm"
+                                    className="whitespace-nowrap"
                                     disabled={isPaying}
                                     onClick={() => void handleRecordPayment(v)}
-                                    className="rounded-xl bg-gradient-to-r from-[#dfbf70] via-[#caa95a] to-[#99782a] px-3 py-1.5 text-[11px] font-semibold text-on-gold"
                                   >
                                     {t.confirmPayment}
-                                  </button>
-                                  <button
+                                  </Button>
+                                  <Button
                                     type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="whitespace-nowrap"
                                     onClick={() => {
                                       setPayingVisitId(null);
                                       setPaymentAmount("");
                                       setPaymentError(null);
                                     }}
-                                    className="glass rounded-xl px-3 py-1.5 text-[11px] text-secondary"
                                   >
                                     {t.cancel}
-                                  </button>
+                                  </Button>
                                 </div>
                               </div>
                             ) : (
-                              <button
+                              <Button
                                 type="button"
+                                variant="danger-soft"
+                                size="sm"
+                                className="whitespace-nowrap"
                                 onClick={() => {
                                   setPayingVisitId(v.id);
                                   setPaymentAmount(String(money.remaining));
                                   setPaymentError(null);
                                 }}
-                                className="rounded-xl border border-rose-400/40 bg-rose-50 px-3 py-1.5 text-[11px] font-semibold text-rose-700"
                               >
                                 {t.recordPayment}
-                              </button>
+                              </Button>
                             )
                           ) : money.total > 0 ? (
                             <Badge variant="green" size="sm">
                               {t.fullyPaid}
                             </Badge>
                           ) : null}
+
+                          {v.revenueShare && money.paid > 0 ? (
+                            <div className="rounded-xl border border-slate-200/80 bg-slate-50/80 p-3 space-y-2">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-[11px] font-semibold text-secondary">
+                                  {t.revenueShare}
+                                </span>
+                                <span className="text-[10px] text-muted">{t.shareOfPaid}</span>
+                              </div>
+                              {(v.caseCostEGP ?? v.revenueShare.caseCostEGP ?? 0) > 0 ? (
+                                <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] border-b border-slate-200/70 pb-2">
+                                  <span className="text-muted">
+                                    {t.caseCosts}
+                                    {(v.caseCostNote || v.revenueShare.caseCostNote)
+                                      ? ` — ${v.caseCostNote || v.revenueShare.caseCostNote}`
+                                      : ""}
+                                  </span>
+                                  <span className="font-mono font-semibold text-rose-600">
+                                    −{(v.caseCostEGP ?? v.revenueShare.caseCostEGP ?? 0).toLocaleString()}{" "}
+                                    {t.currency}
+                                  </span>
+                                  <span className="w-full text-muted">
+                                    {t.splitBasis}:{" "}
+                                    <span className="font-mono font-semibold text-primary">
+                                      {v.revenueShare.basisEGP.toLocaleString()} {t.currency}
+                                    </span>
+                                  </span>
+                                </div>
+                              ) : null}
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px]">
+                                <div>
+                                  <span className="text-muted block">
+                                    {t.shareDoctor} ({v.revenueShare.doctorPercent}%)
+                                  </span>
+                                  <span className="font-mono font-bold text-primary">
+                                    {v.revenueShare.doctorEGP.toLocaleString()} {t.currency}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="text-muted block">
+                                    {t.shareAssistant} ({v.revenueShare.assistantPercent}%)
+                                  </span>
+                                  <span className="font-mono font-bold text-primary">
+                                    {v.revenueShare.assistantEGP.toLocaleString()} {t.currency}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="text-muted block">
+                                    {t.shareReferral} ({v.revenueShare.referralPercent}%)
+                                  </span>
+                                  <span className="font-mono font-bold text-primary">
+                                    {v.revenueShare.referralEGP.toLocaleString()} {t.currency}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="text-muted block">
+                                    {t.shareOrg} ({v.revenueShare.orgPercent}%)
+                                  </span>
+                                  <span className="font-mono font-bold text-emerald-700">
+                                    {v.revenueShare.orgEGP.toLocaleString()} {t.currency}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          ) : null}
                         </div>
                       );
-                    })()}
+                    })() : null}
                   </div>
                 )}
 
@@ -634,12 +781,13 @@ export default function PatientProfilePage() {
                 {t.noVisitsDescription}
               </p>
               <div className="mt-4">
-                <Link
-                  href={`/${locale}/patients/${patient.code}/visit/new`}
-                  className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#dfbf70] via-[#caa95a] to-[#99782a] px-4 py-2 text-xs font-semibold text-on-gold"
+                <ButtonLink
+                  href={`/${locale}/calendar?bookPatient=${encodeURIComponent(patient.code)}`}
+                  variant="primary"
+                  size="sm"
                 >
-                  {t.recordFirstVisit}
-                </Link>
+                  {t.scheduleAppointment}
+                </ButtonLink>
               </div>
             </div>
           )}
@@ -655,6 +803,48 @@ export default function PatientProfilePage() {
           </div>
         </div>
       )}
+
+      <Modal
+        isOpen={confirmDeleteOpen}
+        onClose={() => {
+          if (isDeleting) return;
+          setConfirmDeleteOpen(false);
+          setDeleteError("");
+        }}
+        title={t.confirmDeleteTitle}
+        description={t.confirmDeleteBody}
+      >
+        <div className="space-y-4">
+          <div className="rounded-xl border border-[var(--border-subtle)] bg-slate-50/80 px-4 py-3">
+            <p className="font-semibold text-sm text-primary">{patient.fullName}</p>
+            <p className="mt-0.5 font-mono text-[11px] text-gold">{patient.code}</p>
+          </div>
+          {deleteError ? <p className="text-xs text-rose-600">{deleteError}</p> : null}
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              disabled={isDeleting}
+              onClick={() => {
+                setConfirmDeleteOpen(false);
+                setDeleteError("");
+              }}
+            >
+              {dict.common.cancel}
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              size="sm"
+              isLoading={isDeleting}
+              onClick={confirmDeletePatient}
+            >
+              {isDeleting ? t.deleting : t.confirmDelete}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </AppShell>
   );
 }

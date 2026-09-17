@@ -39,6 +39,21 @@ export interface PatientRecord {
   };
 }
 
+export interface RevenueShare {
+  doctorPercent: number;
+  assistantPercent: number;
+  referralPercent: number;
+  orgPercent: number;
+  paidEGP?: number;
+  caseCostEGP?: number;
+  caseCostNote?: string | null;
+  basisEGP: number;
+  doctorEGP: number;
+  assistantEGP: number;
+  referralEGP: number;
+  orgEGP: number;
+}
+
 export interface ClinicalVisit {
   id: string;
   patientId: string;
@@ -54,7 +69,7 @@ export interface ClinicalVisit {
     name: string;
     toothNumber?: string;
     status: "Completed" | "In Progress" | "Planned";
-    costEGP: number;
+    costEGP?: number | null;
     notes?: string;
   }[];
   attachments: {
@@ -72,6 +87,11 @@ export interface ClinicalVisit {
   totalCostEGP?: number;
   paidAmountEGP?: number;
   remainingEGP?: number;
+  caseCostEGP?: number;
+  caseCostNote?: string | null;
+  sourceStreamId?: string | null;
+  sourceStream?: string | null;
+  revenueShare?: RevenueShare;
 }
 
 export interface AppointmentRecord {
@@ -113,6 +133,8 @@ export interface FinancialRecord {
   doctorName?: string;
   description: string;
   status: "POSTED" | "VOIDED";
+  visitId?: string | null;
+  isManual?: boolean;
 }
 
 export interface FinancialCategory {
@@ -123,11 +145,123 @@ export interface FinancialCategory {
   isActive: boolean;
 }
 
+export interface FinancialSummary {
+  grossCollectedEGP: number;
+  caseCostsEGP?: number;
+  splitBasisEGP?: number;
+  doctorShareEGP: number;
+  assistantShareEGP: number;
+  referralShareEGP: number;
+  clinicShareEGP: number;
+  manualRevenueEGP: number;
+  totalExpensesEGP: number;
+  netClinicProfitEGP: number;
+  paidVisitCount: number;
+  avgCaseEGP: number;
+}
+
 export interface CaseStream {
   id: string;
   nameEn: string;
   nameAr?: string | null;
   isActive: boolean;
+  /** Admin-configured referrer share (0–50). Omitted for medical staff. */
+  referralPercent?: number;
+}
+
+export interface ReportSourceBreakdown {
+  streamId: string | null;
+  nameEn: string;
+  nameAr?: string | null;
+  referralPercent: number;
+  isOwnedChannel: boolean;
+  visitCount: number;
+  patientCount: number;
+  percentOfVisits: number;
+  paidEGP: number;
+  treatmentValueEGP: number;
+  clinicShareEGP: number;
+  referralShareEGP: number;
+  doctorShareEGP: number;
+  assistantShareEGP: number;
+}
+
+export interface ReportTimeBucket {
+  visits: number;
+  paidEGP: number;
+  clinicShareEGP: number;
+  treatmentValueEGP: number;
+}
+
+export interface ReportCaseRow {
+  visitId: string;
+  occurredAt: string;
+  patientName: string;
+  paidEGP: number;
+  caseCostEGP: number;
+  caseCostNote?: string | null;
+  splitBasisEGP: number;
+  doctorEGP: number;
+  assistantEGP: number;
+  referralEGP: number;
+  clinicEGP: number;
+  doctorPercent: number;
+  assistantPercent: number;
+  referralPercent: number;
+  orgPercent: number;
+}
+
+export interface ReportAnalytics {
+  period: { preset: string; from: string; to: string };
+  totals: {
+    visits: number;
+    patients: number;
+    newPatients: number;
+    grossCollectedEGP: number;
+    caseCostsEGP: number;
+    splitBasisEGP: number;
+    treatmentValueEGP: number;
+    doctorShareEGP: number;
+    assistantShareEGP: number;
+    referralShareEGP: number;
+    clinicShareEGP: number;
+    outstandingEGP: number;
+    avgPaidPerVisitEGP: number;
+    collectionRatePercent: number;
+  };
+  bySource: ReportSourceBreakdown[];
+  byDay: Array<ReportTimeBucket & { date: string }>;
+  byMonth: Array<ReportTimeBucket & { month: string }>;
+  byDoctor: Array<{
+    doctorId: string;
+    name: string;
+    visits: number;
+    paidEGP: number;
+    clinicShareEGP: number;
+  }>;
+  topProcedures: Array<{
+    name: string;
+    count: number;
+    revenueEGP: number;
+    percentOfRevenue: number;
+  }>;
+  cases: ReportCaseRow[];
+  insights: {
+    peakDay: (ReportTimeBucket & { date: string }) | null;
+    peakMonth: (ReportTimeBucket & { month: string }) | null;
+    ownedChannelVisits: number;
+    referrerChannelVisits: number;
+  };
+  filterOptions: {
+    streams: Array<{
+      id: string;
+      nameEn: string;
+      nameAr?: string | null;
+      referralPercent: number;
+      isActive: boolean;
+    }>;
+    doctors: Array<{ id: string; name: string }>;
+  };
 }
 
 export interface AuditLogRecord {
@@ -138,6 +272,30 @@ export interface AuditLogRecord {
   action: string;
   target: string;
   description: string;
+}
+
+export interface DashboardOverviewMonth {
+  from: string;
+  to: string;
+  grossCollectedEGP: number;
+  clinicShareEGP: number;
+  netClinicProfitEGP: number;
+  byDay: Array<{ date: string; paidEGP: number; clinicShareEGP: number }>;
+}
+
+export interface DashboardOverview {
+  role: "ADMIN" | "DOCTOR";
+  counts: {
+    patients?: number;
+    doctors?: number;
+    todayAppointments?: number;
+    todayQueue?: number;
+    patientsInCare?: number;
+  };
+  month?: DashboardOverviewMonth;
+  todaySchedule?: AppointmentRecord[];
+  recentPatients?: Array<{ id: string; code: string; fullName: string; lastVisit: string }>;
+  todayQueue?: AppointmentRecord[];
 }
 
 export type Patient = PatientRecord;
@@ -158,7 +316,7 @@ export const INITIAL_DOCTORS: DoctorRecord[] = [
   {
     id: "doc-1",
     code: "DOC-DR-001",
-    name: "Dr. Tarek Omar",
+    name: "Dr. Sayed El-Bahy",
     specialization: "Oral & Maxillofacial Surgery",
     phone: "+20 100 123 4567",
     activePatients: 0,
