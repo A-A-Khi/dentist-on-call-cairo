@@ -4,7 +4,7 @@ from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
-from sqlalchemy import or_, select
+from sqlalchemy import desc, or_, select
 
 from app.auth.dependencies import (
     CurrentUser,
@@ -69,6 +69,7 @@ class VisitUpdateRequest(BaseModel):
     status: str | None = None
     case_cost_egp: int | None = None
     case_cost_note: str | None = None
+    paid_egp: int | None = Field(default=None, ge=0)
 
 
 def _egp(minor: int | None) -> int:
@@ -184,6 +185,72 @@ def _serialize_visit(
     return payload
 
 
+def _reduce_posted_visit_revenue(session: DatabaseSession, visit: Visit, reduce_egp: int) -> None:
+    """Shrink or void posted visit revenue so a lower collected amount stays in the ledger."""
+    remaining_minor = max(0, int(reduce_egp)) * 100
+    if remaining_minor <= 0:
+        return
+    txs = session.scalars(
+        select(FinancialTransaction)
+        .where(
+            FinancialTransaction.visit_id == visit.id,
+            FinancialTransaction.organization_id == visit.organization_id,
+            FinancialTransaction.type == TransactionType.REVENUE,
+            FinancialTransaction.status == TransactionStatus.POSTED,
+        )
+        .order_by(desc(FinancialTransaction.created_at))
+    ).all()
+    for tx in txs:
+        if remaining_minor <= 0:
+            break
+        amount = tx.amount_minor or 0
+        if amount <= remaining_minor:
+            tx.status = TransactionStatus.VOIDED
+            tx.voided_at = datetime.now(UTC)
+            remaining_minor -= amount
+        else:
+            tx.amount_minor = amount - remaining_minor
+            remaining_minor = 0
+
+
+def _apply_visit_paid(
+    *,
+    session: DatabaseSession,
+    organization_id: UUID,
+    user_id: UUID,
+    patient: Patient,
+    visit: Visit,
+    target_paid_egp: int,
+) -> None:
+    target = max(0, int(target_paid_egp))
+    total = _egp(visit.total_cost_minor)
+    if target > total:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Paid amount cannot exceed the visit total of {total} EGP.",
+        )
+    old = _egp(visit.paid_amount_minor)
+    if target == old:
+        return
+    if target > old:
+        _post_visit_revenue(
+            session=session,
+            organization_id=organization_id,
+            user_id=user_id,
+            patient=patient,
+            visit=visit,
+            doctor_id=visit.doctor_id,
+            amount_egp=target - old,
+            description=(
+                f"Payment adjusted to {target} EGP (+{target - old}) "
+                f"- {patient.full_name} ({patient.patient_code})"
+            ),
+        )
+    else:
+        _reduce_posted_visit_revenue(session, visit, old - target)
+    visit.paid_amount_minor = target * 100
+
+
 def _post_visit_revenue(
     *,
     session: DatabaseSession,
@@ -293,11 +360,44 @@ def create_visit(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found.")
     ensure_patient_access(session, current_user=current_user, patient_id=patient.id)
 
-    doc_profile = None
-    if current_user.role == UserRole.DOCTOR:
+    linked_appointment: Appointment | None = None
+    if payload.appointment_id is not None:
+        linked_appointment = session.get(Appointment, payload.appointment_id)
+        if (
+            linked_appointment is None
+            or linked_appointment.organization_id != current_user.organization_id
+            or linked_appointment.patient_id != patient.id
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid appointment for this patient.",
+            )
+        if linked_appointment.status in {AppointmentStatus.CANCELLED, AppointmentStatus.NO_SHOW}:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot start a visit from a cancelled or no-show appointment.",
+            )
+
+    # Prefer the appointment's doctor so calendar → visit keeps attribution.
+    doc_profile: DoctorProfile | None = None
+    if linked_appointment is not None and linked_appointment.doctor_id is not None:
+        appointment_doctor = session.get(DoctorProfile, linked_appointment.doctor_id)
+        if (
+            appointment_doctor is not None
+            and appointment_doctor.organization_id == current_user.organization_id
+        ):
+            doc_profile = appointment_doctor
+
+    if doc_profile is None and current_user.role == UserRole.DOCTOR:
         own_id = current_doctor_profile_id(session, current_user=current_user)
         if own_id:
             doc_profile = session.get(DoctorProfile, own_id)
+        if doc_profile is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Doctor profile not found for the current user.",
+            )
+
     if doc_profile is None:
         doc_profile = session.scalar(
             select(DoctorProfile).where(DoctorProfile.organization_id == current_user.organization_id).limit(1)
@@ -338,24 +438,6 @@ def create_visit(
         visit_source_stream_id = stream.id
 
     shares = visit_share_snapshot(session, visit_source_stream_id)
-
-    linked_appointment: Appointment | None = None
-    if payload.appointment_id is not None:
-        linked_appointment = session.get(Appointment, payload.appointment_id)
-        if (
-            linked_appointment is None
-            or linked_appointment.organization_id != current_user.organization_id
-            or linked_appointment.patient_id != patient.id
-        ):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid appointment for this patient.",
-            )
-        if linked_appointment.status in {AppointmentStatus.CANCELLED, AppointmentStatus.NO_SHOW}:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Cannot start a visit from a cancelled or no-show appointment.",
-            )
 
     visit = Visit(
         id=uuid4(),
@@ -570,14 +652,37 @@ def update_visit(
                 note = note[:160]
             visit.case_cost_note = note
 
+    paid_requested = (
+        current_user.role == UserRole.ADMIN
+        and "paid_egp" in payload.model_fields_set
+        and payload.paid_egp is not None
+    )
+    old_paid = _egp(visit.paid_amount_minor)
+    target_paid = max(0, int(payload.paid_egp)) if paid_requested else old_paid
+    new_total = (
+        sum(max(p.cost_egp, 0) for p in payload.procedures)
+        if payload.procedures is not None
+        else _egp(visit.total_cost_minor)
+    )
+    if target_paid > new_total:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Paid amount cannot exceed the visit total of {new_total} EGP.",
+        )
+
+    # Lower the collected amount before shrinking the fee so the paid<=total check holds.
+    if paid_requested and target_paid < old_paid:
+        _apply_visit_paid(
+            session=session,
+            organization_id=current_user.organization_id,
+            user_id=current_user.user_id,
+            patient=patient,
+            visit=visit,
+            target_paid_egp=target_paid,
+        )
+
     if payload.procedures is not None:
-        total_cost_egp = sum(max(p.cost_egp, 0) for p in payload.procedures)
-        paid_egp = _egp(visit.paid_amount_minor)
-        if total_cost_egp < paid_egp:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Total cost cannot be less than amount already paid ({paid_egp} EGP).",
-            )
+        total_cost_egp = new_total
         existing = session.scalars(select(VisitProcedure).where(VisitProcedure.visit_id == visit.id)).all()
         for proc in existing:
             session.delete(proc)
@@ -599,6 +704,16 @@ def update_visit(
                     performed_at=datetime.now(UTC) if completed_like else None,
                 )
             )
+
+    if paid_requested and _egp(visit.paid_amount_minor) < target_paid:
+        _apply_visit_paid(
+            session=session,
+            organization_id=current_user.organization_id,
+            user_id=current_user.user_id,
+            patient=patient,
+            visit=visit,
+            target_paid_egp=target_paid,
+        )
 
     if payload.status is not None:
         status_key = payload.status.strip().upper()

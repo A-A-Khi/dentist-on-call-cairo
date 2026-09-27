@@ -231,6 +231,9 @@
     "paymentAmount": "Payment amount (EGP)",
     "confirmPayment": "Confirm payment",
     "paymentError": "Enter a valid amount up to the remaining balance.",
+    "editPaid": "Edit amount",
+    "savePaid": "Save amount",
+    "paidEditError": "Enter an amount from 0 up to the visit total.",
     "cancel": "Cancel",
     "revenueShare": "Case revenue split",
     "shareDoctor": "Doctor",
@@ -291,8 +294,8 @@
     "saveButton": "Save Visit Changes",
     "cancelButton": "Cancel",
     "noProcedures": "No procedures on this visit.",
-    "paidLocked": "Already paid",
-    "paymentNote": "Posted payments stay unchanged. Collect remaining balance from the patient chart."
+    "paidLocked": "Amount collected",
+    "paymentNote": "Change the collected amount to any value from 0 up to the visit total. The ledger updates with it."
   },
   "calendar": {
     "title": "Clinical Appointments Calendar",
@@ -365,7 +368,7 @@
     "postTransaction": "+ Post Transaction",
     "editTransaction": "Edit entry",
     "saveTransaction": "Save changes",
-    "editLockedHint": "Visit-linked revenue is edited from the patient visit / payment, not the ledger.",
+    "editLockedHint": "Voided entries cannot be edited.",
     "outstandingTitle": "Outstanding patient balances",
     "outstandingEmpty": "No unpaid visit balances.",
     "recordPayment": "Record payment",

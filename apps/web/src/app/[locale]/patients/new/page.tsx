@@ -23,6 +23,7 @@ export default function NewPatientPage() {
   const [hasAllergies, setHasAllergies] = useState(false);
   const [hasSystemicConditions, setHasSystemicConditions] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [streams, setStreams] = useState<CaseStream[]>([]);
   const [sourceStreamId, setSourceStreamId] = useState("");
 
@@ -32,7 +33,7 @@ export default function NewPatientPage() {
       const data = await fetchCaseStreams();
       if (!cancelled) {
         setStreams(data);
-        if (data[0]) setSourceStreamId(data[0].id);
+        // Keep default empty = Dentist on Call (fully ours); do not auto-pick a referrer.
       }
     }
     void loadStreams();
@@ -64,6 +65,7 @@ export default function NewPatientPage() {
     const notes = (formData.get("notes") as string) || "";
 
     try {
+      setSubmitError(null);
       const result = await createPatientRecord({
         fullName,
         dob,
@@ -87,8 +89,14 @@ export default function NewPatientPage() {
         },
       });
       router.push(`/${locale}/patients/${result.code}`);
-    } catch {
-      router.push(`/${locale}/patients`);
+    } catch (err) {
+      const message =
+        err instanceof Error && err.message
+          ? err.message
+          : isAr
+            ? "تعذر إنشاء المريض. حاول مرة أخرى."
+            : "Could not create patient. Please try again.";
+      setSubmitError(message);
     } finally {
       setIsSubmitting(false);
     }
@@ -155,18 +163,16 @@ export default function NewPatientPage() {
                   name="sourceStreamId"
                   value={sourceStreamId}
                   onChange={(e) => setSourceStreamId(e.target.value)}
-                  required={streams.length > 0}
                   className="w-full glass rounded-xl px-3.5 py-2 text-xs text-primary focus:border-[#caa95a] focus:outline-none"
                 >
-                  {streams.length === 0 ? (
-                    <option value="">{isAr ? "لا توجد قنوات — أضف من الإعدادات" : "No streams — add in Settings"}</option>
-                  ) : (
-                    streams.map((stream) => (
-                      <option key={stream.id} value={stream.id}>
-                        {streamLabel(stream)}
-                      </option>
-                    ))
-                  )}
+                  <option value="">
+                    {isAr ? "دنتست أون كول (بدون إحالة)" : "Dentist on Call (no referral)"}
+                  </option>
+                  {streams.map((stream) => (
+                    <option key={stream.id} value={stream.id}>
+                      {streamLabel(stream)}
+                    </option>
+                  ))}
                 </select>
                 <p className="mt-1.5 text-[10px] text-muted">
                   {isAr
@@ -291,17 +297,24 @@ export default function NewPatientPage() {
             />
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-2">
-            <ButtonLink href={`/${locale}/patients`} variant="secondary" size="md">
-              {dict.patientNew.cancelButton}
-            </ButtonLink>
-            <Button variant="primary" size="md" type="submit" disabled={isSubmitting}>
-              {isSubmitting
-                ? isAr
-                  ? "جاري إنشاء الملف..."
-                  : "Creating Record..."
-                : dict.patientNew.submitButton}
-            </Button>
+          <div className="flex flex-col items-end gap-2 pt-2">
+            {submitError ? (
+              <p className="w-full text-xs text-rose-400 text-end" role="alert">
+                {submitError}
+              </p>
+            ) : null}
+            <div className="flex items-center justify-end gap-3">
+              <ButtonLink href={`/${locale}/patients`} variant="secondary" size="md">
+                {dict.patientNew.cancelButton}
+              </ButtonLink>
+              <Button variant="primary" size="md" type="submit" disabled={isSubmitting}>
+                {isSubmitting
+                  ? isAr
+                    ? "جاري إنشاء الملف..."
+                    : "Creating Record..."
+                  : dict.patientNew.submitButton}
+              </Button>
+            </div>
           </div>
         </form>
       </div>

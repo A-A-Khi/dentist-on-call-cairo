@@ -42,7 +42,9 @@ export default function EditVisitPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isAdmin, setIsAdmin] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(
+    () => (getStoredSessionUser()?.role ?? "ADMIN") === "ADMIN"
+  );
   const [paidAmountEGP, setPaidAmountEGP] = useState(0);
   const [caseCost, setCaseCost] = useState(0);
   const [caseCostNote, setCaseCostNote] = useState("");
@@ -123,11 +125,11 @@ export default function EditVisitPage() {
 
   const handleSave = async () => {
     if (!patient || !isAdmin) return;
-    if (totalCost < paidAmountEGP) {
+    if (paidAmountEGP < 0 || paidAmountEGP > totalCost) {
       setError(
         isAr
-          ? `لا يمكن أن يكون الإجمالي أقل من المدفوع (${paidAmountEGP} ج.م)`
-          : `Total cannot be less than amount already paid (${paidAmountEGP} EGP)`
+          ? `المدفوع يجب أن يكون بين 0 و ${totalCost.toLocaleString()} ج.م`
+          : `Paid amount must be between 0 and ${totalCost.toLocaleString()} EGP`
       );
       return;
     }
@@ -147,11 +149,18 @@ export default function EditVisitPage() {
         })),
         caseCostEGP: Math.max(0, caseCost),
         caseCostNote: caseCostNote.trim() || null,
+        paidEGP: paidAmountEGP,
         status: "Completed",
       });
       router.push(`/${locale}/patients/${patient.code}`);
-    } catch {
-      setError(isAr ? "تعذر حفظ تعديلات الزيارة." : "Could not save visit changes.");
+    } catch (err) {
+      setError(
+        err instanceof Error && err.message
+          ? err.message
+          : isAr
+            ? "تعذر حفظ تعديلات الزيارة."
+            : "Could not save visit changes."
+      );
       setIsSaving(false);
     }
   };
@@ -208,7 +217,7 @@ export default function EditVisitPage() {
             />
           }
           title={dict.visitEdit.title}
-          subtitle={`${patient.fullName} • ${dict.visitEdit.paidLocked}: ${paidAmountEGP.toLocaleString()} ${dict.patientProfile.currency}`}
+          subtitle={patient.fullName}
         />
 
         <div className="glass-card rounded-2xl p-5 sm:p-6 space-y-3">
@@ -301,10 +310,19 @@ export default function EditVisitPage() {
               </span>
             </div>
             <div>
-              <span className="text-muted block">{dict.patientProfile.amountPaid}</span>
-              <span className="font-mono font-bold text-emerald-600">
-                {paidAmountEGP.toLocaleString()} {dict.patientProfile.currency}
-              </span>
+              <label className="text-muted block" htmlFor="paid-amount">
+                {dict.patientProfile.amountPaid}
+              </label>
+              <input
+                id="paid-amount"
+                type="number"
+                min={0}
+                max={totalCost}
+                step={1}
+                value={paidAmountEGP}
+                onChange={(e) => setPaidAmountEGP(Math.max(0, Number(e.target.value) || 0))}
+                className="mt-1 w-full rounded-lg glass px-2 py-1 text-xs font-mono font-bold text-emerald-700 focus:border-[#caa95a] focus:outline-none"
+              />
             </div>
             <div>
               <span className="text-muted block">{dict.patientProfile.remainingBalance}</span>

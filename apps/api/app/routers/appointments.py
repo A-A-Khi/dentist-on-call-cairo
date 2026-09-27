@@ -67,6 +67,21 @@ def _parse_appointment_start(date_str: str, time_str: str) -> datetime:
     )
 
 
+def _resolve_doctor_by_name(
+    session: DatabaseSession,
+    organization_id: UUID,
+    doctor_name: str,
+) -> DoctorProfile | None:
+    docs = session.scalars(
+        select(DoctorProfile).where(DoctorProfile.organization_id == organization_id)
+    ).all()
+    for doc in docs:
+        user = session.get(User, doc.user_id)
+        if user and user.display_name == doctor_name:
+            return doc
+    return None
+
+
 def _serialize_appointment(session: DatabaseSession, apt: Appointment) -> dict[str, Any]:
     patient = session.get(Patient, apt.patient_id)
     doctor_name = "Dr. Sayed El-Bahy"
@@ -213,11 +228,25 @@ def create_appointment(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found.")
     ensure_patient_access(session, current_user=current_user, patient_id=patient.id)
 
-    doc_profile = None
+    doc_profile: DoctorProfile | None = None
     if current_user.role == UserRole.DOCTOR:
         own_id = current_doctor_profile_id(session, current_user=current_user)
         if own_id:
             doc_profile = session.get(DoctorProfile, own_id)
+        if doc_profile is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Doctor profile not found for the current user.",
+            )
+    elif payload.doctor_name:
+        doc_profile = _resolve_doctor_by_name(
+            session, current_user.organization_id, payload.doctor_name
+        )
+        if doc_profile is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Doctor '{payload.doctor_name}' not found.",
+            )
     if doc_profile is None:
         doc_profile = session.scalar(
             select(DoctorProfile).where(DoctorProfile.organization_id == current_user.organization_id).limit(1)
@@ -303,14 +332,15 @@ def update_appointment(
 
     # Only admins may reassign appointments across doctors.
     if payload.doctor_name is not None and current_user.role == UserRole.ADMIN:
-        docs = session.scalars(
-            select(DoctorProfile).where(DoctorProfile.organization_id == current_user.organization_id)
-        ).all()
-        for doc in docs:
-            user = session.get(User, doc.user_id)
-            if user and user.display_name == payload.doctor_name:
-                apt.doctor_id = doc.id
-                break
+        resolved = _resolve_doctor_by_name(
+            session, current_user.organization_id, payload.doctor_name
+        )
+        if resolved is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Doctor '{payload.doctor_name}' not found.",
+            )
+        apt.doctor_id = resolved.id
 
     session.add(
         AuditLog(

@@ -14,6 +14,7 @@ import {
   fetchPatientById,
   fetchPatientVisits,
   recordVisitPayment,
+  updateClinicalVisit,
 } from "../../../../lib/clinical-api";
 import type { Patient, Visit } from "../../../../lib/clinical-data";
 import { getStoredSessionUser } from "../../../../lib/session";
@@ -40,10 +41,13 @@ export default function PatientProfilePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
   const [payingVisitId, setPayingVisitId] = useState<string | null>(null);
+  const [paymentMode, setPaymentMode] = useState<"add" | "edit">("add");
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [isPaying, setIsPaying] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(
+    () => (getStoredSessionUser()?.role ?? "ADMIN") === "ADMIN"
+  );
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
@@ -114,6 +118,47 @@ export default function PatientProfilePage() {
     } finally {
       setIsPaying(false);
     }
+  };
+
+  const handleSetPaidAmount = async (visit: Visit) => {
+    const { total } = visitMoney(visit);
+    const amount = parseInt(paymentAmount, 10);
+    if (Number.isNaN(amount) || amount < 0 || amount > total) {
+      setPaymentError(t.paidEditError);
+      return;
+    }
+    setIsPaying(true);
+    setPaymentError(null);
+    try {
+      const updated = await updateClinicalVisit(visit.id, { paidEGP: amount });
+      setVisits((prev) =>
+        prev.map((v) =>
+          v.id === visit.id
+            ? {
+                ...v,
+                totalCostEGP: updated.totalCostEGP ?? v.totalCostEGP,
+                paidAmountEGP: updated.paidAmountEGP ?? amount,
+                remainingEGP: updated.remainingEGP ?? Math.max(total - amount, 0),
+                revenueShare: updated.revenueShare ?? v.revenueShare,
+              }
+            : v
+        )
+      );
+      setPayingVisitId(null);
+      setPaymentAmount("");
+    } catch (err) {
+      setPaymentError(
+        err instanceof Error && err.message ? err.message : t.paidEditError
+      );
+    } finally {
+      setIsPaying(false);
+    }
+  };
+
+  const closePaymentForm = () => {
+    setPayingVisitId(null);
+    setPaymentAmount("");
+    setPaymentError(null);
   };
 
   async function confirmDeletePatient() {
@@ -623,67 +668,86 @@ export default function PatientProfilePage() {
                             </div>
                           </div>
 
-                          {money.remaining > 0 ? (
-                            payingVisitId === v.id ? (
-                              <div className="space-y-2">
-                                <input
-                                  type="number"
-                                  min={1}
-                                  max={money.remaining}
-                                  value={paymentAmount}
-                                  onChange={(e) => setPaymentAmount(e.target.value)}
-                                  placeholder={t.paymentAmount}
-                                  className="w-full glass rounded-xl px-3 py-2 text-xs font-mono focus:border-[#caa95a] focus:outline-none"
-                                />
-                                {paymentError && (
-                                  <p className="text-[11px] text-rose-600">{paymentError}</p>
-                                )}
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <Button
-                                    type="button"
-                                    variant="primary"
-                                    size="sm"
-                                    className="whitespace-nowrap"
-                                    disabled={isPaying}
-                                    onClick={() => void handleRecordPayment(v)}
-                                  >
-                                    {t.confirmPayment}
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    className="whitespace-nowrap"
-                                    onClick={() => {
-                                      setPayingVisitId(null);
-                                      setPaymentAmount("");
-                                      setPaymentError(null);
-                                    }}
-                                  >
-                                    {t.cancel}
-                                  </Button>
-                                </div>
+                          {payingVisitId === v.id ? (
+                            <div className="space-y-2">
+                              <input
+                                type="number"
+                                min={paymentMode === "edit" ? 0 : 1}
+                                max={paymentMode === "edit" ? money.total : money.remaining}
+                                value={paymentAmount}
+                                onChange={(e) => setPaymentAmount(e.target.value)}
+                                placeholder={paymentMode === "edit" ? t.editPaid : t.paymentAmount}
+                                className="w-full glass rounded-xl px-3 py-2 text-xs font-mono focus:border-[#caa95a] focus:outline-none"
+                              />
+                              {paymentError && (
+                                <p className="text-[11px] text-rose-600">{paymentError}</p>
+                              )}
+                              <div className="flex flex-wrap items-center gap-2">
+                                <Button
+                                  type="button"
+                                  variant="primary"
+                                  size="sm"
+                                  className="whitespace-nowrap"
+                                  disabled={isPaying}
+                                  onClick={() =>
+                                    void (paymentMode === "edit"
+                                      ? handleSetPaidAmount(v)
+                                      : handleRecordPayment(v))
+                                  }
+                                >
+                                  {paymentMode === "edit" ? t.savePaid : t.confirmPayment}
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="whitespace-nowrap"
+                                  onClick={closePaymentForm}
+                                >
+                                  {t.cancel}
+                                </Button>
                               </div>
-                            ) : (
-                              <Button
-                                type="button"
-                                variant="danger-soft"
-                                size="sm"
-                                className="whitespace-nowrap"
-                                onClick={() => {
-                                  setPayingVisitId(v.id);
-                                  setPaymentAmount(String(money.remaining));
-                                  setPaymentError(null);
-                                }}
-                              >
-                                {t.recordPayment}
-                              </Button>
-                            )
-                          ) : money.total > 0 ? (
-                            <Badge variant="green" size="sm">
-                              {t.fullyPaid}
-                            </Badge>
-                          ) : null}
+                            </div>
+                          ) : (
+                            <div className="flex flex-wrap items-center gap-2">
+                              {money.remaining > 0 ? (
+                                <Button
+                                  type="button"
+                                  variant="danger-soft"
+                                  size="sm"
+                                  className="whitespace-nowrap"
+                                  onClick={() => {
+                                    setPayingVisitId(v.id);
+                                    setPaymentMode("add");
+                                    setPaymentAmount(String(money.remaining));
+                                    setPaymentError(null);
+                                  }}
+                                >
+                                  {t.recordPayment}
+                                </Button>
+                              ) : money.total > 0 ? (
+                                <Badge variant="green" size="sm">
+                                  {t.fullyPaid}
+                                </Badge>
+                              ) : null}
+                              {(money.total > 0 || money.paid > 0) && (
+                                <Button
+                                  type="button"
+                                  variant="secondary"
+                                  size="sm"
+                                  className="whitespace-nowrap"
+                                  onClick={() => {
+                                    setPayingVisitId(v.id);
+                                    setPaymentMode("edit");
+                                    setPaymentAmount(String(money.paid));
+                                    setPaymentError(null);
+                                  }}
+                                >
+                                  {t.editPaid}
+                                </Button>
+                              )}
+                            </div>
+                          )}
 
                           {v.revenueShare && money.paid > 0 ? (
                             <div className="rounded-xl border border-slate-200/80 bg-slate-50/80 p-3 space-y-2">

@@ -40,6 +40,13 @@ function setLocal<T>(key: string, val: T): void {
   }
 }
 
+/** Re-throw server errors so UI does not treat validation/auth failures as offline success. */
+function rethrowApiError(err: unknown): void {
+  if (err instanceof ApiError) {
+    throw err;
+  }
+}
+
 type SmokingStatus = Patient["medicalHistory"]["smokingStatus"];
 
 function asSmokingStatus(value?: string): SmokingStatus {
@@ -145,8 +152,26 @@ export async function createPatientRecord(input: CreatePatientInput): Promise<{ 
         source_stream_id: input.sourceStreamId || null,
         emergency_contact: input.emergencyContact || null,
         assigned_doctor_id: input.assignedDoctorId || null,
-        medical_history: input.medicalHistory || null,
-        dental_history: input.dentalHistory || null,
+        medical_history: input.medicalHistory
+          ? {
+              allergies: input.medicalHistory.allergies,
+              conditions: input.medicalHistory.conditions,
+              medications: input.medicalHistory.medications,
+              surgeries: input.medicalHistory.surgeries,
+              smoking_status: input.medicalHistory.smokingStatus,
+              additional_notes: input.medicalHistory.additionalNotes,
+            }
+          : null,
+        dental_history: input.dentalHistory
+          ? {
+              previous_treatment: input.dentalHistory.previousTreatment,
+              extractions: input.dentalHistory.extractions,
+              root_canals: input.dentalHistory.rootCanals,
+              gum_problems: input.dentalHistory.gumProblems,
+              sensitivity: input.dentalHistory.sensitivity,
+              other: input.dentalHistory.other,
+            }
+          : null,
       }),
     });
 
@@ -192,9 +217,7 @@ export async function createPatientRecord(input: CreatePatientInput): Promise<{ 
     return response;
   } catch (err) {
     // Auth/CSRF/validation failures must surface — do not invent local-only patients.
-    if (err instanceof ApiError && err.status >= 400 && err.status < 500) {
-      throw err;
-    }
+    rethrowApiError(err);
     // Local offline creation fallback (network / server down)
     const existing = getLocal<Patient[]>(STORAGE_KEYS.PATIENTS, []);
     const nextNum = 100 + existing.length + 1;
@@ -293,7 +316,8 @@ export async function updatePatientRecord(
       existing.map((p) => (p.id === response.id || p.code === response.code ? { ...p, ...response } : p))
     );
     return response;
-  } catch {
+  } catch (err) {
+    rethrowApiError(err);
     const existing = getLocal<Patient[]>(STORAGE_KEYS.PATIENTS, []);
     const idx = existing.findIndex((p) => p.code === patientIdentifier || p.id === patientIdentifier);
     if (idx < 0) throw new Error("Patient not found");
@@ -414,7 +438,7 @@ export async function deletePatientRecord(
 export async function fetchPatientVisits(patientIdentifier: string): Promise<Visit[]> {
   try {
     const data = await apiClient<Visit[]>(`/patients/${encodeURIComponent(patientIdentifier)}/visits`);
-    if (Array.isArray(data) && data.length > 0) {
+    if (Array.isArray(data)) {
       return data;
     }
   } catch {
@@ -544,9 +568,7 @@ export async function recordClinicalVisit(input: CreateVisitInput): Promise<{ id
     return response;
   } catch (err) {
     // Server rejected the visit (auth, validation, missing patient) — do not fake success.
-    if (err instanceof ApiError) {
-      throw err;
-    }
+    rethrowApiError(err);
     const id = `visit_${Date.now()}`;
     const existing = getLocal<Visit[]>(STORAGE_KEYS.VISITS, []);
     const newVisit: Visit = {
@@ -665,7 +687,8 @@ export async function recordVisitPayment(
     }
 
     return response;
-  } catch {
+  } catch (err) {
+    rethrowApiError(err);
     const visits = getLocal<Visit[]>(STORAGE_KEYS.VISITS, []);
     const visit = visits.find((v) => v.id === visitId);
     if (!visit) {
@@ -744,6 +767,7 @@ export interface UpdateVisitInput {
   status?: "Completed" | "Draft" | "Amended";
   caseCostEGP?: number;
   caseCostNote?: string | null;
+  paidEGP?: number;
 }
 
 export async function updateClinicalVisit(visitId: string, input: UpdateVisitInput): Promise<Visit> {
@@ -764,6 +788,7 @@ export async function updateClinicalVisit(visitId: string, input: UpdateVisitInp
         status: input.status,
         case_cost_egp: input.caseCostEGP,
         case_cost_note: input.caseCostNote,
+        paid_egp: input.paidEGP,
       }),
     });
 
@@ -773,7 +798,8 @@ export async function updateClinicalVisit(visitId: string, input: UpdateVisitInp
       existing.map((v) => (v.id === visitId ? { ...v, ...response } : v))
     );
     return response;
-  } catch {
+  } catch (err) {
+    rethrowApiError(err);
     const existing = getLocal<Visit[]>(STORAGE_KEYS.VISITS, []);
     const current = existing.find((v) => v.id === visitId);
     if (!current) throw new Error("Visit not found");
@@ -787,9 +813,12 @@ export async function updateClinicalVisit(visitId: string, input: UpdateVisitInp
         }))
       : current.procedures;
     const totalCostEGP = procedures.reduce((sum, p) => sum + (p.costEGP || 0), 0);
-    const paidAmountEGP = current.paidAmountEGP ?? 0;
-    if (totalCostEGP < paidAmountEGP) {
-      throw new Error("Total cost cannot be less than amount already paid");
+    const paidAmountEGP =
+      input.paidEGP !== undefined
+        ? Math.max(0, input.paidEGP)
+        : (current.paidAmountEGP ?? 0);
+    if (paidAmountEGP > totalCostEGP) {
+      throw new Error(`Paid amount cannot exceed the visit total of ${totalCostEGP} EGP.`);
     }
     const updated: Visit = {
       ...current,
@@ -868,7 +897,8 @@ export async function scheduleAppointment(input: {
       }),
     });
     return response;
-  } catch {
+  } catch (err) {
+    rethrowApiError(err);
     const id = `apt_${Date.now()}`;
     const existing = getLocal<Appointment[]>(STORAGE_KEYS.APPOINTMENTS, []);
     const newApt: Appointment = {
@@ -988,7 +1018,8 @@ export async function updateAppointment(
       existing.map((a) => (a.id === appointmentId ? { ...a, ...response } : a))
     );
     return response;
-  } catch {
+  } catch (err) {
+    rethrowApiError(err);
     const existing = getLocal<Appointment[]>(STORAGE_KEYS.APPOINTMENTS, []);
     const current = existing.find((a) => a.id === appointmentId);
     if (!current) throw new Error("Appointment not found");
@@ -1018,7 +1049,7 @@ export async function updateAppointment(
 export async function fetchFinancialTransactions(): Promise<FinancialTransaction[]> {
   try {
     const data = await apiClient<FinancialTransaction[]>("/financials/transactions");
-    if (Array.isArray(data) && data.length > 0) {
+    if (Array.isArray(data)) {
       setLocal(STORAGE_KEYS.FINANCIALS, data);
       return data;
     }
@@ -1133,7 +1164,8 @@ export async function postFinancialTransaction(input: {
       }),
     });
     return response;
-  } catch {
+  } catch (err) {
+    rethrowApiError(err);
     const id = `tx_${Date.now()}`;
     const existing = getLocal<FinancialTransaction[]>(STORAGE_KEYS.FINANCIALS, []);
     const newTx: FinancialTransaction = {
@@ -1179,6 +1211,7 @@ export async function updateFinancialTransaction(
       }),
     });
   } catch (error) {
+    rethrowApiError(error);
     const existing = getLocal<FinancialTransaction[]>(STORAGE_KEYS.FINANCIALS, []);
     const idx = existing.findIndex((tx) => tx.id === id);
     if (idx < 0) throw error;
@@ -1254,24 +1287,13 @@ export async function updateCaseStream(
 export async function fetchDoctors(): Promise<Doctor[]> {
   try {
     const data = await apiClient<Doctor[]>("/doctors");
-    if (Array.isArray(data) && data.length > 0) {
+    if (Array.isArray(data)) {
       return data;
     }
   } catch {
     // Fallback
   }
-  return [
-    {
-      id: "doc-1",
-      code: "DOC-DR-001",
-      name: "Dr. Sayed El-Bahy",
-      specialization: "Endodontics & Aesthetic Dentistry",
-      phone: "+20 100 123 4567",
-      activePatients: 0,
-      completedVisitsThisMonth: 0,
-      status: "ACTIVE",
-    },
-  ];
+  return [];
 }
 
 // -----------------------------
@@ -1281,7 +1303,7 @@ export async function fetchDoctors(): Promise<Doctor[]> {
 export async function fetchAuditLogs(): Promise<AuditLogRecord[]> {
   try {
     const data = await apiClient<AuditLogApiRow[]>("/audit/logs");
-    if (Array.isArray(data) && data.length > 0) {
+    if (Array.isArray(data)) {
       return data.map((d) => ({
         id: d.id,
         user: d.actor_user_id ? "Operations Staff" : "System Admin",

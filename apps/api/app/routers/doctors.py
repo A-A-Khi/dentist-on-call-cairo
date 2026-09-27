@@ -1,10 +1,11 @@
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter
 from sqlalchemy import func, select
 
 from app.auth.dependencies import CurrentUser, DatabaseSession, current_doctor_profile_id
-from app.models.enums import UserRole
+from app.models.enums import UserRole, VisitStatus
 from app.models.identity import DoctorProfile, User
 from app.models.patients import PatientCareAssignment, Visit
 
@@ -47,9 +48,14 @@ def list_doctors(
         ).all()
         care_counts = {doctor_id: int(count) for doctor_id, count in care_rows}
 
+        month_start = datetime.now(UTC).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         visit_rows = session.execute(
             select(Visit.doctor_id, func.count(Visit.id))
-            .where(Visit.doctor_id.in_(doctor_ids))
+            .where(
+                Visit.doctor_id.in_(doctor_ids),
+                Visit.occurred_at >= month_start,
+                Visit.status.in_([VisitStatus.COMPLETED, VisitStatus.AMENDED]),
+            )
             .group_by(Visit.doctor_id)
         ).all()
         visit_counts = {doctor_id: int(count) for doctor_id, count in visit_rows}

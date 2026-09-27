@@ -35,7 +35,9 @@ export default function EditPatientPage() {
   const [sourceStreamId, setSourceStreamId] = useState("");
   const [hasAllergies, setHasAllergies] = useState(false);
   const [hasSystemicConditions, setHasSystemicConditions] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(
+    () => (getStoredSessionUser()?.role ?? "ADMIN") === "ADMIN"
+  );
 
   useEffect(() => {
     const session = getStoredSessionUser();

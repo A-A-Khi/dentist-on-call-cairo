@@ -318,7 +318,8 @@ def financial_summary(
     total_expenses = sum(tx.amount_minor // 100 for tx in expense_txs)
 
     paid_visit_count = sum(1 for v in visits if (v.paid_amount_minor or 0) > 0)
-    avg_case = round(gross_collected / paid_visit_count) if paid_visit_count else 0
+    visit_collected = max(0, gross_collected - manual_revenue)
+    avg_case = round(visit_collected / paid_visit_count) if paid_visit_count else 0
     net_clinic_profit = clinic_share - total_expenses
 
     return {
@@ -429,10 +430,20 @@ def update_transaction(
     if tx.status != TransactionStatus.POSTED:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only posted transactions can be edited.")
 
-    if tx.visit_id is not None:
+    visit = session.get(Visit, tx.visit_id) if tx.visit_id is not None else None
+    if tx.visit_id is not None and (
+        visit is None or visit.organization_id != current_user.organization_id
+    ):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Visit not found.")
+    if (
+        visit is not None
+        and tx.type == TransactionType.REVENUE
+        and payload.type is not None
+        and _parse_tx_type(payload.type) != TransactionType.REVENUE
+    ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Visit-linked revenue cannot be edited here. Update the visit payment instead.",
+            detail="Visit payments stay recorded as revenue. Change the amount instead.",
         )
 
     before = {
@@ -470,6 +481,21 @@ def update_transaction(
             )
 
     if payload.amount_egp is not None:
+        if visit is not None and tx.type == TransactionType.REVENUE:
+            old_amount = tx.amount_minor // 100
+            new_paid = (visit.paid_amount_minor or 0) // 100 + (payload.amount_egp - old_amount)
+            total = (visit.total_cost_minor or 0) // 100
+            if new_paid < 0:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="This amount would make the visit paid total negative.",
+                )
+            if new_paid > total:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Paid amount cannot exceed the visit total of {total} EGP.",
+                )
+            visit.paid_amount_minor = new_paid * 100
         tx.amount_minor = payload.amount_egp * 100
 
     if payload.description is not None:
@@ -538,6 +564,12 @@ def reverse_transaction(
 
     orig.status = TransactionStatus.VOIDED
     orig.voided_at = datetime.now(UTC)
+
+    # Keep visit balances consistent when voiding visit-linked revenue.
+    if orig.visit_id is not None and orig.type == TransactionType.REVENUE:
+        visit = session.get(Visit, orig.visit_id)
+        if visit is not None and visit.organization_id == current_user.organization_id:
+            visit.paid_amount_minor = max(0, (visit.paid_amount_minor or 0) - (orig.amount_minor or 0))
 
     session.commit()
     return {"id": str(orig.id), "status": "VOIDED"}

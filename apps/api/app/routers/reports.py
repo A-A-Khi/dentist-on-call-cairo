@@ -206,7 +206,7 @@ def reports_analytics(
             source_key = str(stream.id)
             source_name_en = stream.name_en
             source_name_ar = stream.name_ar
-            referral_pct = stream.referral_percent
+            referral_pct = visit.referral_share_percent
             is_owned = referral_pct == 0
         else:
             # No source chosen on the visit => fully ours this time.

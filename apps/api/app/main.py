@@ -36,9 +36,44 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
             conn.execute(
                 text(
                     """
+                    ALTER TABLE case_streams
+                      ADD COLUMN IF NOT EXISTS referral_percent integer NOT NULL DEFAULT 0
+                    """
+                )
+            )
+            conn.execute(
+                text(
+                    """
                     ALTER TABLE visits
                       ADD COLUMN IF NOT EXISTS source_stream_id uuid
                       REFERENCES case_streams(id) ON DELETE SET NULL
+                    """
+                )
+            )
+            conn.execute(
+                text(
+                    """
+                    ALTER TABLE visits
+                      ADD COLUMN IF NOT EXISTS case_cost_minor bigint NOT NULL DEFAULT 0
+                    """
+                )
+            )
+            conn.execute(
+                text(
+                    """
+                    ALTER TABLE visits
+                      ADD COLUMN IF NOT EXISTS case_cost_note varchar(160)
+                    """
+                )
+            )
+            conn.execute(
+                text(
+                    """
+                    ALTER TABLE visits
+                      ADD COLUMN IF NOT EXISTS doctor_share_percent integer NOT NULL DEFAULT 35,
+                      ADD COLUMN IF NOT EXISTS assistant_share_percent integer NOT NULL DEFAULT 15,
+                      ADD COLUMN IF NOT EXISTS referral_share_percent integer NOT NULL DEFAULT 0,
+                      ADD COLUMN IF NOT EXISTS org_share_percent integer NOT NULL DEFAULT 50
                     """
                 )
             )
@@ -77,6 +112,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
                           organization_id uuid NOT NULL REFERENCES organizations(id) ON DELETE RESTRICT,
                           name_en varchar(160) NOT NULL,
                           name_ar varchar(160),
+                          referral_percent integer NOT NULL DEFAULT 0,
                           is_active boolean NOT NULL DEFAULT true,
                           created_at timestamptz NOT NULL DEFAULT now(),
                           updated_at timestamptz NOT NULL DEFAULT now(),
@@ -100,6 +136,27 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
                         ALTER TABLE visits
                           ADD COLUMN IF NOT EXISTS source_stream_id uuid
                           REFERENCES case_streams(id) ON DELETE SET NULL
+                        """
+                    )
+                )
+                conn.execute(
+                    text(
+                        """
+                        ALTER TABLE case_streams
+                          ADD COLUMN IF NOT EXISTS referral_percent integer NOT NULL DEFAULT 0
+                        """
+                    )
+                )
+                conn.execute(
+                    text(
+                        """
+                        ALTER TABLE visits
+                          ADD COLUMN IF NOT EXISTS case_cost_minor bigint NOT NULL DEFAULT 0,
+                          ADD COLUMN IF NOT EXISTS case_cost_note varchar(160),
+                          ADD COLUMN IF NOT EXISTS doctor_share_percent integer NOT NULL DEFAULT 35,
+                          ADD COLUMN IF NOT EXISTS assistant_share_percent integer NOT NULL DEFAULT 15,
+                          ADD COLUMN IF NOT EXISTS referral_share_percent integer NOT NULL DEFAULT 0,
+                          ADD COLUMN IF NOT EXISTS org_share_percent integer NOT NULL DEFAULT 50
                         """
                     )
                 )

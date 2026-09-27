@@ -90,8 +90,7 @@ export default function FinancialsPage() {
   const isEditModalOpen = editingTx !== null;
   const isTxFormOpen = isPostOpen || isEditModalOpen;
 
-  const canEditTx = (tx: FinancialTransaction) =>
-    tx.status === "POSTED" && (tx.isManual !== false) && !tx.visitId;
+  const canEditTx = (tx: FinancialTransaction) => tx.status === "POSTED";
 
   const openEditTx = (tx: FinancialTransaction) => {
     if (!canEditTx(tx)) return;
@@ -629,16 +628,15 @@ export default function FinancialsPage() {
               }
               await loadData();
               closeTxForm();
-            } catch {
-              setPostError(
-                editingTx
-                  ? isAr
-                    ? "تعذر حفظ التعديلات. تحقق من الفئة وحاول مجددًا."
-                    : "Could not save changes. Check the category and try again."
-                  : isAr
-                    ? "تعذر ترحيل الحركة. تحقق من الفئة وحاول مجددًا."
-                    : "Could not post transaction. Check the category and try again."
-              );
+            } catch (err) {
+              const fallback = editingTx
+                ? isAr
+                  ? "تعذر حفظ التعديلات. تحقق من الفئة وحاول مجددًا."
+                  : "Could not save changes. Check the category and try again."
+                : isAr
+                  ? "تعذر ترحيل الحركة. تحقق من الفئة وحاول مجددًا."
+                  : "Could not post transaction. Check the category and try again.";
+              setPostError(err instanceof Error && err.message ? err.message : fallback);
             } finally {
               setIsSaving(false);
             }

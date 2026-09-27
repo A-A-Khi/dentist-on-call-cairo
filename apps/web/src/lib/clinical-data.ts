@@ -83,7 +83,7 @@ export interface ClinicalVisit {
   }[];
   doctorNotes: string;
   prescriptions?: string[];
-  status: "Completed" | "Draft";
+  status: "Completed" | "Draft" | "Amended";
   totalCostEGP?: number;
   paidAmountEGP?: number;
   remainingEGP?: number;
