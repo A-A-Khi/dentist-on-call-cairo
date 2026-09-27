@@ -28,6 +28,7 @@ from app.models.identity import DoctorProfile, User
 from app.models.operations import CaseStream, FinancialCategory, FinancialTransaction
 from app.models.patients import Patient, Visit, VisitProcedure
 from app.models.scheduling import Appointment, AppointmentStatusEvent
+from app.services.clinical_purge import purge_visits
 from app.services.revenue_split import serialize_revenue_share, visit_share_snapshot
 
 router = APIRouter(tags=["visits"])
@@ -70,6 +71,7 @@ class VisitUpdateRequest(BaseModel):
     case_cost_egp: int | None = None
     case_cost_note: str | None = None
     paid_egp: int | None = Field(default=None, ge=0)
+    source_stream_id: UUID | None = None
 
 
 def _egp(minor: int | None) -> int:
@@ -651,6 +653,27 @@ def update_visit(
             if note and len(note) > 160:
                 note = note[:160]
             visit.case_cost_note = note
+        if "source_stream_id" in payload.model_fields_set:
+            stream_id = payload.source_stream_id
+            if stream_id is None:
+                visit.source_stream_id = None
+            else:
+                stream = session.get(CaseStream, stream_id)
+                if (
+                    stream is None
+                    or stream.organization_id != current_user.organization_id
+                    or not stream.is_active
+                ):
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Invalid or inactive referrer / case stream.",
+                    )
+                visit.source_stream_id = stream.id
+            shares = visit_share_snapshot(session, visit.source_stream_id)
+            visit.doctor_share_percent = shares["doctor"]
+            visit.assistant_share_percent = shares["assistant"]
+            visit.referral_share_percent = shares["referral"]
+            visit.org_share_percent = shares["org"]
 
     paid_requested = (
         current_user.role == UserRole.ADMIN
@@ -753,6 +776,54 @@ def update_visit(
         patient,
         include_financials=current_user.role == UserRole.ADMIN,
     )
+
+
+@router.delete(
+    "/visits/{visit_id}",
+    dependencies=[Depends(require_csrf), Depends(require_roles(UserRole.ADMIN))],
+)
+def delete_visit(
+    visit_id: UUID,
+    current_user: CurrentUser,
+    session: DatabaseSession,
+) -> dict[str, Any]:
+    visit = session.scalar(
+        select(Visit).where(
+            Visit.id == visit_id,
+            Visit.organization_id == current_user.organization_id,
+        )
+    )
+    if not visit:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Visit not found.")
+
+    patient = session.get(Patient, visit.patient_id)
+    if not patient or patient.deleted_at is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found.")
+    ensure_patient_access(session, current_user=current_user, patient_id=patient.id)
+
+    paid_egp = _egp(visit.paid_amount_minor)
+    total_egp = _egp(visit.total_cost_minor)
+    purge_visits(session, [visit])
+    session.add(
+        AuditLog(
+            id=uuid4(),
+            organization_id=current_user.organization_id,
+            actor_user_id=current_user.user_id,
+            actor_role=current_user.role.value,
+            action="VISIT_DELETED",
+            target_type="visits",
+            target_id=visit_id,
+            description=f"Deleted visit and its payments for {patient.full_name} ({patient.patient_code})",
+            occurred_at=datetime.now(UTC),
+            metadata_json={
+                "patient_code": patient.patient_code,
+                "paid_egp": paid_egp,
+                "total_egp": total_egp,
+            },
+        )
+    )
+    session.commit()
+    return {"id": str(visit_id), "deleted": True}
 
 
 @router.post(

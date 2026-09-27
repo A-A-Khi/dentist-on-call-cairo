@@ -768,6 +768,7 @@ export interface UpdateVisitInput {
   caseCostEGP?: number;
   caseCostNote?: string | null;
   paidEGP?: number;
+  sourceStreamId?: string | null;
 }
 
 export async function updateClinicalVisit(visitId: string, input: UpdateVisitInput): Promise<Visit> {
@@ -789,6 +790,7 @@ export async function updateClinicalVisit(visitId: string, input: UpdateVisitInp
         case_cost_egp: input.caseCostEGP,
         case_cost_note: input.caseCostNote,
         paid_egp: input.paidEGP,
+        source_stream_id: input.sourceStreamId,
       }),
     });
 
@@ -813,13 +815,9 @@ export async function updateClinicalVisit(visitId: string, input: UpdateVisitInp
         }))
       : current.procedures;
     const totalCostEGP = procedures.reduce((sum, p) => sum + (p.costEGP || 0), 0);
-    const paidAmountEGP =
-      input.paidEGP !== undefined
-        ? Math.max(0, input.paidEGP)
-        : (current.paidAmountEGP ?? 0);
-    if (paidAmountEGP > totalCostEGP) {
-      throw new Error(`Paid amount cannot exceed the visit total of ${totalCostEGP} EGP.`);
-    }
+    const requestedPaid =
+      input.paidEGP !== undefined ? Math.max(0, input.paidEGP) : (current.paidAmountEGP ?? 0);
+    const paidAmountEGP = Math.min(requestedPaid, totalCostEGP);
     const updated: Visit = {
       ...current,
       chiefComplaint: input.chiefComplaint ?? current.chiefComplaint,
@@ -835,12 +833,32 @@ export async function updateClinicalVisit(visitId: string, input: UpdateVisitInp
       caseCostEGP: input.caseCostEGP ?? current.caseCostEGP ?? 0,
       caseCostNote:
         input.caseCostNote !== undefined ? input.caseCostNote : current.caseCostNote,
+      sourceStreamId:
+        input.sourceStreamId !== undefined ? input.sourceStreamId : current.sourceStreamId,
     };
     setLocal(
       STORAGE_KEYS.VISITS,
       existing.map((v) => (v.id === visitId ? updated : v))
     );
     return updated;
+  }
+}
+
+export async function deleteClinicalVisit(visitId: string): Promise<{ id: string; deleted: boolean }> {
+  try {
+    return await apiClient<{ id: string; deleted: boolean }>(
+      `/visits/${encodeURIComponent(visitId)}`,
+      { method: "DELETE" }
+    );
+  } catch (err) {
+    rethrowApiError(err);
+    const existing = getLocal<Visit[]>(STORAGE_KEYS.VISITS, []);
+    if (!existing.some((v) => v.id === visitId)) throw err;
+    setLocal(
+      STORAGE_KEYS.VISITS,
+      existing.filter((v) => v.id !== visitId)
+    );
+    return { id: visitId, deleted: true };
   }
 }
 

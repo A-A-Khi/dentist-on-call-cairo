@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { AppShell } from "../../../../../../../components/layout/AppShell";
 import { PageHeader } from "../../../../../../../components/layout/PageHeader";
@@ -10,12 +9,15 @@ import { Textarea } from "../../../../../../../components/ui/Textarea";
 import { Button, ButtonLink } from "../../../../../../../components/ui/Button";
 import { getDictionarySync } from "../../../../../../../i18n/get-dictionary";
 import {
+  deleteClinicalVisit,
+  fetchCaseStreams,
   fetchPatientById,
   fetchVisitById,
   updateClinicalVisit,
 } from "../../../../../../../lib/clinical-api";
+import { PROCEDURE_PRICE_LIST, type PriceListItem } from "../../../../../../../lib/price-list";
 import { getStoredSessionUser } from "../../../../../../../lib/session";
-import type { Patient } from "../../../../../../../lib/clinical-data";
+import type { CaseStream, Patient } from "../../../../../../../lib/clinical-data";
 
 interface ProcedureRow {
   id: string;
@@ -48,6 +50,9 @@ export default function EditVisitPage() {
   const [paidAmountEGP, setPaidAmountEGP] = useState(0);
   const [caseCost, setCaseCost] = useState(0);
   const [caseCostNote, setCaseCostNote] = useState("");
+  const [streams, setStreams] = useState<CaseStream[]>([]);
+  const [sourceStreamId, setSourceStreamId] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const [chiefComplaint, setChiefComplaint] = useState("");
   const [clinicalFindings, setClinicalFindings] = useState("");
@@ -66,12 +71,14 @@ export default function EditVisitPage() {
     async function load() {
       setIsLoading(true);
       try {
-        const [p, visit] = await Promise.all([
+        const [p, visit, streamData] = await Promise.all([
           fetchPatientById(patientId),
           fetchVisitById(visitId),
+          fetchCaseStreams(),
         ]);
         if (cancelled) return;
         setPatient(p);
+        setStreams(streamData);
         if (visit) {
           setChiefComplaint(cleanText(visit.chiefComplaint));
           setClinicalFindings(cleanText(visit.clinicalFindings));
@@ -81,6 +88,7 @@ export default function EditVisitPage() {
           setPaidAmountEGP(visit.paidAmountEGP ?? 0);
           setCaseCost(visit.caseCostEGP ?? 0);
           setCaseCostNote(visit.caseCostNote || "");
+          setSourceStreamId(visit.sourceStreamId || "");
           setProcedures(
             visit.procedures.map((proc) => ({
               id: proc.id,
@@ -101,36 +109,50 @@ export default function EditVisitPage() {
   }, [patientId, visitId]);
 
   const totalCost = procedures.reduce((sum, p) => sum + p.cost, 0);
-  const remaining = Math.max(totalCost - paidAmountEGP, 0);
+  const paidToSave = Math.min(Math.max(0, paidAmountEGP), totalCost);
+  const remaining = Math.max(totalCost - paidToSave, 0);
+  const selectedStream = streams.find((s) => s.id === sourceStreamId);
+  const streamLabel = (stream: CaseStream) =>
+    isAr && stream.nameAr ? stream.nameAr : stream.nameEn;
 
-  const addProcedure = () => {
+  const clampPaid = (nextTotal: number) => {
+    setPaidAmountEGP((paid) => Math.min(Math.max(0, paid), nextTotal));
+  };
+
+  const addProcedure = (item?: PriceListItem) => {
     setProcedures((prev) => [
       ...prev,
       {
         id: `proc-${Date.now()}`,
-        name: isAr ? "إجراء سريري" : "Clinical Procedure",
+        name: item ? (isAr ? item.nameAr : item.nameEn) : isAr ? "إجراء سريري" : "Clinical Procedure",
         tooth: "",
-        cost: 0,
+        cost: item?.defaultCostEGP ?? 0,
       },
     ]);
   };
 
   const updateProcedure = (id: string, updates: Partial<ProcedureRow>) => {
-    setProcedures((prev) => prev.map((p) => (p.id === id ? { ...p, ...updates } : p)));
+    setProcedures((prev) => {
+      const next = prev.map((p) => (p.id === id ? { ...p, ...updates } : p));
+      if (updates.cost !== undefined) {
+        clampPaid(next.reduce((sum, p) => sum + p.cost, 0));
+      }
+      return next;
+    });
   };
 
   const removeProcedure = (id: string) => {
-    setProcedures((prev) => prev.filter((p) => p.id !== id));
+    setProcedures((prev) => {
+      const next = prev.filter((p) => p.id !== id);
+      clampPaid(next.reduce((sum, p) => sum + p.cost, 0));
+      return next;
+    });
   };
 
   const handleSave = async () => {
     if (!patient || !isAdmin) return;
-    if (paidAmountEGP < 0 || paidAmountEGP > totalCost) {
-      setError(
-        isAr
-          ? `المدفوع يجب أن يكون بين 0 و ${totalCost.toLocaleString()} ج.م`
-          : `Paid amount must be between 0 and ${totalCost.toLocaleString()} EGP`
-      );
+    if (procedures.some((p) => p.name.trim().length < 2)) {
+      setError(isAr ? "اسم كل إجراء لازم يكون حرفين على الأقل." : "Each procedure name needs at least 2 characters.");
       return;
     }
     setIsSaving(true);
@@ -149,7 +171,8 @@ export default function EditVisitPage() {
         })),
         caseCostEGP: Math.max(0, caseCost),
         caseCostNote: caseCostNote.trim() || null,
-        paidEGP: paidAmountEGP,
+        paidEGP: paidToSave,
+        sourceStreamId: sourceStreamId || null,
         status: "Completed",
       });
       router.push(`/${locale}/patients/${patient.code}`);
@@ -162,6 +185,22 @@ export default function EditVisitPage() {
             : "Could not save visit changes."
       );
       setIsSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!patient || !isAdmin || isDeleting) return;
+    if (!window.confirm(dict.visitEdit.deleteConfirm)) return;
+    setIsDeleting(true);
+    setError(null);
+    try {
+      await deleteClinicalVisit(visitId);
+      router.push(`/${locale}/patients/${patient.code}`);
+    } catch (err) {
+      setError(
+        err instanceof Error && err.message ? err.message : dict.visitEdit.deleteFailed
+      );
+      setIsDeleting(false);
     }
   };
 
@@ -221,6 +260,31 @@ export default function EditVisitPage() {
         />
 
         <div className="glass-card rounded-2xl p-5 sm:p-6 space-y-3">
+          <div>
+            <h3 className="text-sm font-semibold text-primary">{dict.visitNew.referrerTitle}</h3>
+            <p className="text-xs text-secondary mt-0.5">{dict.visitNew.referrerHelp}</p>
+          </div>
+          <select
+            value={sourceStreamId}
+            onChange={(e) => setSourceStreamId(e.target.value)}
+            className="w-full glass rounded-xl px-3 py-2 text-xs text-primary focus:border-[#caa95a] focus:outline-none"
+          >
+            <option value="">{dict.visitNew.oursSource}</option>
+            {streams.map((stream) => (
+              <option key={stream.id} value={stream.id}>
+                {streamLabel(stream)}
+                {typeof stream.referralPercent === "number" ? ` — ${stream.referralPercent}%` : ""}
+              </option>
+            ))}
+          </select>
+          {selectedStream ? (
+            <p className="text-[11px] text-muted">
+              {dict.visitNew.referrerPercent}: {selectedStream.referralPercent ?? 0}%
+            </p>
+          ) : null}
+        </div>
+
+        <div className="glass-card rounded-2xl p-5 sm:p-6 space-y-3">
           <h3 className="text-sm font-semibold text-primary">{dict.visitNew.chiefComplaint}</h3>
           <Textarea value={chiefComplaint} onChange={(e) => setChiefComplaint(e.target.value)} rows={2} />
         </div>
@@ -248,10 +312,30 @@ export default function EditVisitPage() {
         <div className="glass-card rounded-2xl p-5 sm:p-6 space-y-4">
           <div className="flex items-center justify-between gap-3">
             <h3 className="text-sm font-semibold text-primary">{dict.visitNew.proceduresTitle}</h3>
-            <Button type="button" variant="secondary" size="xs" onClick={addProcedure}>
+            <Button type="button" variant="secondary" size="xs" onClick={() => addProcedure()}>
               {dict.visitNew.addProcedure}
             </Button>
           </div>
+          <select
+            defaultValue=""
+            onChange={(e) => {
+              const item = PROCEDURE_PRICE_LIST.find((p) => p.id === e.target.value);
+              if (item) {
+                addProcedure(item);
+                e.target.value = "";
+              }
+            }}
+            className="w-full glass rounded-xl px-3 py-2 text-xs text-primary focus:border-[#caa95a] focus:outline-none"
+          >
+            <option value="" disabled>
+              {isAr ? "إضافة إجراء من لائحة الأسعار" : "Add a procedure from the price list"}
+            </option>
+            {PROCEDURE_PRICE_LIST.map((item) => (
+              <option key={item.id} value={item.id}>
+                {(isAr ? item.nameAr : item.nameEn)} — {item.defaultCostEGP.toLocaleString()}
+              </option>
+            ))}
+          </select>
 
           {procedures.length === 0 ? (
             <p className="text-xs text-muted">{dict.visitEdit.noProcedures}</p>
@@ -319,8 +403,10 @@ export default function EditVisitPage() {
                 min={0}
                 max={totalCost}
                 step={1}
-                value={paidAmountEGP}
-                onChange={(e) => setPaidAmountEGP(Math.max(0, Number(e.target.value) || 0))}
+                value={paidToSave}
+                onChange={(e) =>
+                  setPaidAmountEGP(Math.min(totalCost, Math.max(0, Number(e.target.value) || 0)))
+                }
                 className="mt-1 w-full rounded-lg glass px-2 py-1 text-xs font-mono font-bold text-emerald-700 focus:border-[#caa95a] focus:outline-none"
               />
             </div>
@@ -388,13 +474,24 @@ export default function EditVisitPage() {
 
         {error && <p className="text-xs text-rose-600">{error}</p>}
 
-        <div className="flex items-center justify-end gap-3">
-          <ButtonLink href={`/${locale}/patients/${patient.code}`} variant="secondary" size="sm">
-            {dict.visitEdit.cancelButton}
-          </ButtonLink>
-          <Button variant="primary" size="sm" onClick={() => void handleSave()} isLoading={isSaving}>
-            {dict.visitEdit.saveButton}
+        <div className="flex items-center justify-between gap-3">
+          <Button
+            type="button"
+            variant="danger-soft"
+            size="sm"
+            onClick={() => void handleDelete()}
+            isLoading={isDeleting}
+          >
+            {dict.visitEdit.deleteVisit}
           </Button>
+          <div className="flex items-center gap-3">
+            <ButtonLink href={`/${locale}/patients/${patient.code}`} variant="secondary" size="sm">
+              {dict.visitEdit.cancelButton}
+            </ButtonLink>
+            <Button variant="primary" size="sm" onClick={() => void handleSave()} isLoading={isSaving}>
+              {dict.visitEdit.saveButton}
+            </Button>
+          </div>
         </div>
       </div>
     </AppShell>

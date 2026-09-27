@@ -295,7 +295,10 @@
     "cancelButton": "Cancel",
     "noProcedures": "No procedures on this visit.",
     "paidLocked": "Amount collected",
-    "paymentNote": "Change the collected amount to any value from 0 up to the visit total. The ledger updates with it."
+    "paymentNote": "Change any fee, the amount collected, case costs, or the referrer. Set collected to 0 to clear a wrong payment. Delete the visit to remove it and its money.",
+    "deleteVisit": "Delete visit",
+    "deleteConfirm": "Delete this visit and the money recorded on it? This cannot be undone.",
+    "deleteFailed": "Could not delete the visit."
   },
   "calendar": {
     "title": "Clinical Appointments Calendar",
