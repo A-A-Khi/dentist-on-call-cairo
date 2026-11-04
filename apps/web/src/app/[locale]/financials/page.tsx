@@ -19,6 +19,7 @@ import {
 import { Modal } from "../../../components/ui/Modal";
 import { Button } from "../../../components/ui/Button";
 import { Input } from "../../../components/ui/Input";
+import { SkeletonCard } from "../../../components/ui/Skeleton";
 import {
   fetchFinancialCategories,
   fetchFinancialSummary,
@@ -351,73 +352,93 @@ export default function FinancialsPage() {
           }
         />
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="glass-card rounded-2xl p-5 space-y-1">
-            <span className="text-xs font-semibold text-secondary">{dict.financials.stats.revenue}</span>
-            <div className="font-mono text-xl font-bold text-emerald-400">
-              +{totalRevenue.toLocaleString()} {currency}
+        {isLoading ? (
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
             </div>
-            <span className="text-[10px] text-emerald-500/80">{isAr ? "مقبوضات مسجلة" : "Collections recorded"}</span>
-          </div>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="glass-card rounded-2xl p-5 space-y-1">
+                <span className="text-xs font-semibold text-secondary">{dict.financials.stats.revenue}</span>
+                <div className="font-mono text-xl font-bold text-emerald-400">
+                  +{totalRevenue.toLocaleString()} {currency}
+                </div>
+                <span className="text-[10px] text-emerald-500/80">{isAr ? "مقبوضات مسجلة" : "Collections recorded"}</span>
+              </div>
 
-          <div className="glass-card rounded-2xl p-5 space-y-1">
-            <span className="text-xs font-semibold text-secondary">{dict.financials.stats.clinicShare}</span>
-            <div className="font-mono text-xl font-bold text-primary">
-              {clinicShare.toLocaleString()} {currency}
-            </div>
-            <span className="text-[10px] text-muted">{isAr ? "بعد تكاليف الحالة ونسب الفريق" : "After case costs & team cuts"}</span>
-          </div>
+              <div className="glass-card rounded-2xl p-5 space-y-1">
+                <span className="text-xs font-semibold text-secondary">{dict.financials.stats.clinicShare}</span>
+                <div className="font-mono text-xl font-bold text-primary">
+                  {clinicShare.toLocaleString()} {currency}
+                </div>
+                <span className="text-[10px] text-muted">{isAr ? "بعد تكاليف الحالة ونسب الفريق" : "After case costs & team cuts"}</span>
+              </div>
 
-          <div className="glass-card rounded-2xl p-5 space-y-1">
-            <span className="text-xs font-semibold text-secondary">{dict.financials.stats.expenses}</span>
-            <div className="font-mono text-xl font-bold text-rose-400">
-              -{totalExpense.toLocaleString()} {currency}
-            </div>
-            <span className="text-[10px] text-rose-500/80">{isAr ? "مصروفات حسب الفئة" : "Categorized expenses"}</span>
-          </div>
+              <div className="glass-card rounded-2xl p-5 space-y-1">
+                <span className="text-xs font-semibold text-secondary">{dict.financials.stats.expenses}</span>
+                <div className="font-mono text-xl font-bold text-rose-400">
+                  -{totalExpense.toLocaleString()} {currency}
+                </div>
+                <span className="text-[10px] text-rose-500/80">{isAr ? "مصروفات حسب الفئة" : "Categorized expenses"}</span>
+              </div>
 
-          <div className="glass-active rounded-2xl p-5 space-y-1 shadow-lg shadow-[#caa95a]/10">
-            <span className="text-xs font-semibold text-gold">{dict.financials.stats.profit}</span>
-            <div className="font-mono text-xl font-bold text-gold-light">
-              {netProfit.toLocaleString()} {currency}
+              <div className="glass-active rounded-2xl p-5 space-y-1 shadow-lg shadow-[#caa95a]/10">
+                <span className="text-xs font-semibold text-gold">{dict.financials.stats.profit}</span>
+                <div className="font-mono text-xl font-bold text-gold-light">
+                  {netProfit.toLocaleString()} {currency}
+                </div>
+                <span className="text-[10px] text-gold/80">{isAr ? "حصة العيادة − المصروفات" : "Clinic share − expenses"}</span>
+              </div>
             </div>
-            <span className="text-[10px] text-gold/80">{isAr ? "حصة العيادة − المصروفات" : "Clinic share − expenses"}</span>
-          </div>
-        </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <div className="glass-card rounded-2xl p-4 space-y-1">
-            <span className="text-[11px] font-semibold text-secondary">{dict.financials.stats.caseCosts}</span>
-            <div className="font-mono text-lg font-bold text-rose-500">
-              {caseCosts.toLocaleString()} {currency}
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <div className="glass-card rounded-2xl p-4 space-y-1">
+                <span className="text-[11px] font-semibold text-secondary">{dict.financials.stats.caseCosts}</span>
+                <div className="font-mono text-lg font-bold text-rose-500">
+                  {caseCosts.toLocaleString()} {currency}
+                </div>
+              </div>
+              <div className="glass-card rounded-2xl p-4 space-y-1">
+                <span className="text-[11px] font-semibold text-secondary">{dict.financials.stats.doctorShare}</span>
+                <div className="font-mono text-lg font-bold text-primary">
+                  {doctorShare.toLocaleString()} {currency}
+                </div>
+              </div>
+              <div className="glass-card rounded-2xl p-4 space-y-1">
+                <span className="text-[11px] font-semibold text-secondary">{dict.financials.stats.assistantShare}</span>
+                <div className="font-mono text-lg font-bold text-primary">
+                  {assistantShare.toLocaleString()} {currency}
+                </div>
+              </div>
+              <div className="glass-card rounded-2xl p-4 space-y-1">
+                <span className="text-[11px] font-semibold text-secondary">{dict.financials.stats.referralShare}</span>
+                <div className="font-mono text-lg font-bold text-primary">
+                  {referralShare.toLocaleString()} {currency}
+                </div>
+              </div>
+              <div className="glass-card rounded-2xl p-4 space-y-1">
+                <span className="text-[11px] font-semibold text-secondary">{dict.financials.stats.avgCase}</span>
+                <div className="font-mono text-lg font-bold text-primary">
+                  {avgCase.toLocaleString()} {currency}
+                </div>
+              </div>
             </div>
-          </div>
-          <div className="glass-card rounded-2xl p-4 space-y-1">
-            <span className="text-[11px] font-semibold text-secondary">{dict.financials.stats.doctorShare}</span>
-            <div className="font-mono text-lg font-bold text-primary">
-              {doctorShare.toLocaleString()} {currency}
-            </div>
-          </div>
-          <div className="glass-card rounded-2xl p-4 space-y-1">
-            <span className="text-[11px] font-semibold text-secondary">{dict.financials.stats.assistantShare}</span>
-            <div className="font-mono text-lg font-bold text-primary">
-              {assistantShare.toLocaleString()} {currency}
-            </div>
-          </div>
-          <div className="glass-card rounded-2xl p-4 space-y-1">
-            <span className="text-[11px] font-semibold text-secondary">{dict.financials.stats.referralShare}</span>
-            <div className="font-mono text-lg font-bold text-primary">
-              {referralShare.toLocaleString()} {currency}
-            </div>
-          </div>
-          <div className="glass-card rounded-2xl p-4 space-y-1">
-            <span className="text-[11px] font-semibold text-secondary">{dict.financials.stats.avgCase}</span>
-            <div className="font-mono text-lg font-bold text-primary">
-              {avgCase.toLocaleString()} {currency}
-            </div>
-          </div>
-        </div>
-        <p className="text-[11px] text-muted -mt-2">{dict.financials.splitHelp}</p>
+            <p className="text-[11px] text-muted -mt-2">{dict.financials.splitHelp}</p>
+          </>
+        )}
 
         <div className="glass-card rounded-2xl p-4 sm:p-5 space-y-3">
           <div className="flex items-center justify-between gap-3">
@@ -429,7 +450,12 @@ export default function FinancialsPage() {
             )}
           </div>
 
-          {outstanding.length === 0 ? (
+          {isLoading ? (
+            <div className="grid grid-cols-1 gap-3">
+              <SkeletonCard />
+              <SkeletonCard />
+            </div>
+          ) : outstanding.length === 0 ? (
             <p className="text-xs text-secondary">{dict.financials.outstandingEmpty}</p>
           ) : (
             <div className="space-y-3">

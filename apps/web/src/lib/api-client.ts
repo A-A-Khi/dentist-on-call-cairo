@@ -105,7 +105,26 @@ export async function apiClient<T>(
 
     let errorData: ApiErrorResponse;
     try {
-      errorData = await response.json();
+      const raw = (await response.json()) as Partial<ApiErrorResponse> & {
+        message?: string;
+        detail?: string | { msg?: string }[];
+      };
+      const detailFromArray = Array.isArray(raw.detail)
+        ? raw.detail.map((item) => (typeof item === "string" ? item : item?.msg)).filter(Boolean).join("; ")
+        : undefined;
+      const detail =
+        (typeof raw.detail === "string" && raw.detail) ||
+        detailFromArray ||
+        (typeof raw.message === "string" && raw.message) ||
+        response.statusText ||
+        `Request failed with status ${response.status}`;
+      errorData = {
+        status: raw.status ?? response.status,
+        detail,
+        type: raw.type,
+        title: raw.title,
+        requestId: raw.requestId,
+      };
     } catch {
       errorData = {
         status: response.status,
