@@ -243,6 +243,14 @@ if not settings.is_production:
     )
 if settings.extra_web_origins:
     _allowed_origins.extend(o.strip() for o in settings.extra_web_origins.split(",") if o.strip())
+# Call-center / doctor PWA (GitHub Pages)
+_allowed_origins.extend(
+    [
+        "https://a-a-khi.github.io",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ]
+)
 # De-dupe while preserving order
 _seen: set[str] = set()
 _allowed_origins = [o for o in _allowed_origins if not (o in _seen or _seen.add(o))]
