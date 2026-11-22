@@ -63,6 +63,11 @@ class Settings(BaseSettings):
     seed_admin_password: str | None = None
     seed_doctor_password: str | None = None
 
+    # Call-center / doctor-app sync (server-to-server)
+    integration_api_key: str | None = None
+    integration_org_id: str | None = None
+    integration_user_id: str | None = None
+
     @property
     def is_production(self) -> bool:
         return self.app_env.strip().lower() == "production"

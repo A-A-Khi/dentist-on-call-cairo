@@ -15,6 +15,7 @@ from app.routers.dashboard import router as dashboard_router
 from app.routers.doctors import router as doctors_router
 from app.routers.financials import router as financials_router
 from app.routers.health import router as health_router
+from app.routers.integrations import router as integrations_router
 from app.routers.patients import router as patients_router
 from app.routers.reports import router as reports_router
 from app.routers.visits import router as visits_router
@@ -74,6 +75,24 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
                       ADD COLUMN IF NOT EXISTS assistant_share_percent integer NOT NULL DEFAULT 15,
                       ADD COLUMN IF NOT EXISTS referral_share_percent integer NOT NULL DEFAULT 0,
                       ADD COLUMN IF NOT EXISTS org_share_percent integer NOT NULL DEFAULT 50
+                    """
+                )
+            )
+            conn.execute(
+                text(
+                    """
+                    ALTER TABLE visits
+                      ADD COLUMN IF NOT EXISTS external_source varchar(64),
+                      ADD COLUMN IF NOT EXISTS external_ref varchar(128)
+                    """
+                )
+            )
+            conn.execute(
+                text(
+                    """
+                    CREATE UNIQUE INDEX IF NOT EXISTS uq_visits_organization_external
+                      ON visits (organization_id, external_source, external_ref)
+                      WHERE external_ref IS NOT NULL
                     """
                 )
             )
@@ -160,6 +179,24 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
                         """
                     )
                 )
+                conn.execute(
+                    text(
+                        """
+                        ALTER TABLE visits
+                          ADD COLUMN IF NOT EXISTS external_source varchar(64),
+                          ADD COLUMN IF NOT EXISTS external_ref varchar(128)
+                        """
+                    )
+                )
+                conn.execute(
+                    text(
+                        """
+                        CREATE UNIQUE INDEX IF NOT EXISTS uq_visits_organization_external
+                          ON visits (organization_id, external_source, external_ref)
+                          WHERE external_ref IS NOT NULL
+                        """
+                    )
+                )
             if settings.seed_demo_data:
                 seed_database()
             else:
@@ -219,6 +256,7 @@ app.add_middleware(
         "Content-Type",
         "Authorization",
         "X-CSRF-Token",
+        "X-Integration-Key",
         "X-Request-ID",
         "Accept",
         "Origin",
@@ -238,3 +276,4 @@ app.include_router(reports_router, prefix="/api/v1")
 app.include_router(doctors_router, prefix="/api/v1")
 app.include_router(dashboard_router, prefix="/api/v1")
 app.include_router(audit_router, prefix="/api/v1")
+app.include_router(integrations_router, prefix="/api/v1")

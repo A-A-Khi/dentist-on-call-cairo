@@ -136,12 +136,17 @@ class Visit(UUIDPrimaryKeyMixin, OrganizationScopedMixin, TimestampMixin, Base):
     __table_args__ = (
         Index("ix_visits_organization_patient_occurred_at", "organization_id", "patient_id", "occurred_at"),
         Index("ix_visits_doctor_occurred_at", "doctor_id", "occurred_at"),
+        # Idempotency for sync: partial unique index created in Alembic / startup patches
+        # (organization_id, external_source, external_ref) WHERE external_ref IS NOT NULL
     )
 
     patient_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("patients.id", ondelete="RESTRICT"))
     doctor_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("doctor_profiles.id", ondelete="RESTRICT"))
     appointment_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("appointments.id", ondelete="RESTRICT"))
     occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    # Idempotent sync from call-center / doctor app (nullable until used)
+    external_source: Mapped[str | None] = mapped_column(String(64))
+    external_ref: Mapped[str | None] = mapped_column(String(128))
     chief_complaint: Mapped[str | None] = mapped_column(Text)
     clinical_findings: Mapped[str | None] = mapped_column(Text)
     diagnosis_text: Mapped[str | None] = mapped_column(Text)
