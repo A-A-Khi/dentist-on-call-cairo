@@ -49,9 +49,9 @@ export function AppSidebar({ locale, role, dict }: AppSidebarProps) {
       </nav>
 
       <div className="glass rounded-xl p-3 text-center space-y-2 mt-4">
-        <div className="mx-auto flex h-14 w-full max-w-[12rem] items-center justify-center overflow-hidden rounded-xl border border-[#caa95a]/30 bg-black px-1">
+        <div className="mx-auto flex h-12 w-full max-w-[11rem] items-center justify-center overflow-hidden rounded-xl border border-[#caa95a]/30 bg-black px-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/brand/logo.png" alt="" className="max-h-full w-full object-contain" />
+          <img src="/brand/mark.png" alt="" className="max-h-full w-full object-contain" />
         </div>
         <p className="text-[11px] font-medium text-gold">Dentist on Call</p>
         <p className="text-[10px] text-muted mt-0.5">Cairo Season 2026</p>
