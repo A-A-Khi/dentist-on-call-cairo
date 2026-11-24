@@ -18,6 +18,7 @@ import {
 } from "../../../components/ui/DataTable";
 import { EmptyState } from "../../../components/ui/EmptyState";
 import { Button, ButtonLink } from "../../../components/ui/Button";
+import { FilterBar } from "../../../components/ui/FilterBar";
 import { Input } from "../../../components/ui/Input";
 import { Modal } from "../../../components/ui/Modal";
 import { SkeletonTable } from "../../../components/ui/Skeleton";
@@ -395,7 +396,7 @@ export default function ReservationsPage() {
           }
         />
 
-        <div className="filter-bar">
+        <FilterBar>
           <input
             type="text"
             value={searchQuery}
@@ -405,13 +406,13 @@ export default function ReservationsPage() {
                 ? "البحث بالاسم، كود المريض، أو الإجراء..."
                 : "Search reservations by patient, code, or procedure..."
             }
-            className="glass-input w-full sm:flex-1 rounded-lg px-3.5 py-2 text-xs text-primary placeholder:text-muted"
+            className="glass-input w-full min-w-[12rem] flex-1 rounded-lg px-3.5 py-2 text-xs text-primary placeholder:text-muted"
           />
 
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="glass-input w-full sm:w-auto rounded-lg px-3 py-2 text-xs text-primary"
+            className="glass-input w-full sm:w-44 rounded-lg px-3 py-2 text-xs text-primary"
           >
             <option value="ALL">
               {dict.reservations.filterStatus}: {isAr ? "الكل" : "All"}
@@ -422,7 +423,7 @@ export default function ReservationsPage() {
             <option value="CANCELLED">{isAr ? "ملغي" : "Cancelled"}</option>
             <option value="NO_SHOW">{isAr ? "لم يحضر" : "No Show"}</option>
           </select>
-        </div>
+        </FilterBar>
 
         {isLoading ? (
           <SkeletonTable rows={6} />

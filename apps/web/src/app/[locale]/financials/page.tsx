@@ -5,7 +5,9 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { AppShell } from "../../../components/layout/AppShell";
 import { PageHeader } from "../../../components/layout/PageHeader";
+import { PageSection } from "../../../components/layout/PageSection";
 import { Badge } from "../../../components/ui/Badge";
+import { StatCard } from "../../../components/ui/StatCard";
 import {
   DataTable,
   TableActions,
@@ -354,13 +356,13 @@ export default function FinancialsPage() {
 
         {isLoading ? (
           <>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="stat-grid">
               <SkeletonCard />
               <SkeletonCard />
               <SkeletonCard />
               <SkeletonCard />
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div className="stat-grid-5">
               <SkeletonCard />
               <SkeletonCard />
               <SkeletonCard />
@@ -370,85 +372,84 @@ export default function FinancialsPage() {
           </>
         ) : (
           <>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="glass-card rounded-2xl p-5 space-y-1">
-                <span className="text-xs font-semibold text-secondary">{dict.financials.stats.revenue}</span>
-                <div className="font-mono text-xl font-bold text-emerald-400">
-                  +{totalRevenue.toLocaleString()} {currency}
-                </div>
-                <span className="text-[10px] text-emerald-500/80">{isAr ? "مقبوضات مسجلة" : "Collections recorded"}</span>
-              </div>
-
-              <div className="glass-card rounded-2xl p-5 space-y-1">
-                <span className="text-xs font-semibold text-secondary">{dict.financials.stats.clinicShare}</span>
-                <div className="font-mono text-xl font-bold text-primary">
-                  {clinicShare.toLocaleString()} {currency}
-                </div>
-                <span className="text-[10px] text-muted">{isAr ? "بعد تكاليف الحالة ونسب الفريق" : "After case costs & team cuts"}</span>
-              </div>
-
-              <div className="glass-card rounded-2xl p-5 space-y-1">
-                <span className="text-xs font-semibold text-secondary">{dict.financials.stats.expenses}</span>
-                <div className="font-mono text-xl font-bold text-rose-400">
-                  -{totalExpense.toLocaleString()} {currency}
-                </div>
-                <span className="text-[10px] text-rose-500/80">{isAr ? "مصروفات حسب الفئة" : "Categorized expenses"}</span>
-              </div>
-
-              <div className="glass-active rounded-2xl p-5 space-y-1 shadow-lg shadow-[#caa95a]/10">
-                <span className="text-xs font-semibold text-gold">{dict.financials.stats.profit}</span>
-                <div className="font-mono text-xl font-bold text-gold-light">
-                  {netProfit.toLocaleString()} {currency}
-                </div>
-                <span className="text-[10px] text-gold/80">{isAr ? "حصة العيادة − المصروفات" : "Clinic share − expenses"}</span>
-              </div>
+            <div className="stat-grid">
+              <StatCard
+                label={dict.financials.stats.revenue}
+                value={`+${totalRevenue.toLocaleString()} ${currency}`}
+                hint={isAr ? "مقبوضات مسجلة" : "Collections recorded"}
+                tone="emerald"
+              />
+              <StatCard
+                label={dict.financials.stats.clinicShare}
+                value={`${clinicShare.toLocaleString()} ${currency}`}
+                hint={isAr ? "بعد تكاليف الحالة ونسب الفريق" : "After case costs & team cuts"}
+              />
+              <StatCard
+                label={dict.financials.stats.expenses}
+                value={`-${totalExpense.toLocaleString()} ${currency}`}
+                hint={isAr ? "مصروفات حسب الفئة" : "Categorized expenses"}
+                tone="rose"
+              />
+              <StatCard
+                label={dict.financials.stats.profit}
+                value={`${netProfit.toLocaleString()} ${currency}`}
+                hint={isAr ? "حصة العيادة − المصروفات" : "Clinic share − expenses"}
+                tone="gold"
+                className="glass-active border-[var(--border-gold)]"
+              />
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              <div className="glass-card rounded-2xl p-4 space-y-1">
-                <span className="text-[11px] font-semibold text-secondary">{dict.financials.stats.caseCosts}</span>
-                <div className="font-mono text-lg font-bold text-rose-500">
-                  {caseCosts.toLocaleString()} {currency}
-                </div>
+            <PageSection
+              title={isAr ? "توزيع الحصص" : "Share breakdown"}
+              description={
+                isAr
+                  ? "بعد خصم تكاليف الحالة · حصة الطبيب متدرجة حسب صافي الشهر"
+                  : "After case costs · doctor share is tiered by monthly net"
+              }
+            >
+              <div className="stat-grid-5">
+                <StatCard
+                  label={dict.financials.stats.caseCosts}
+                  value={`${caseCosts.toLocaleString()} ${currency}`}
+                  tone="rose"
+                />
+                <StatCard
+                  label={dict.financials.stats.doctorShare}
+                  value={`${doctorShare.toLocaleString()} ${currency}`}
+                />
+                <StatCard
+                  label={dict.financials.stats.assistantShare}
+                  value={`${assistantShare.toLocaleString()} ${currency}`}
+                />
+                <StatCard
+                  label={dict.financials.stats.referralShare}
+                  value={`${referralShare.toLocaleString()} ${currency}`}
+                />
+                <StatCard
+                  label={dict.financials.stats.avgCase}
+                  value={`${avgCase.toLocaleString()} ${currency}`}
+                />
               </div>
-              <div className="glass-card rounded-2xl p-4 space-y-1">
-                <span className="text-[11px] font-semibold text-secondary">{dict.financials.stats.doctorShare}</span>
-                <div className="font-mono text-lg font-bold text-primary">
-                  {doctorShare.toLocaleString()} {currency}
-                </div>
-              </div>
-              <div className="glass-card rounded-2xl p-4 space-y-1">
-                <span className="text-[11px] font-semibold text-secondary">{dict.financials.stats.assistantShare}</span>
-                <div className="font-mono text-lg font-bold text-primary">
-                  {assistantShare.toLocaleString()} {currency}
-                </div>
-              </div>
-              <div className="glass-card rounded-2xl p-4 space-y-1">
-                <span className="text-[11px] font-semibold text-secondary">{dict.financials.stats.referralShare}</span>
-                <div className="font-mono text-lg font-bold text-primary">
-                  {referralShare.toLocaleString()} {currency}
-                </div>
-              </div>
-              <div className="glass-card rounded-2xl p-4 space-y-1">
-                <span className="text-[11px] font-semibold text-secondary">{dict.financials.stats.avgCase}</span>
-                <div className="font-mono text-lg font-bold text-primary">
-                  {avgCase.toLocaleString()} {currency}
-                </div>
-              </div>
-            </div>
-            <p className="text-[11px] text-muted -mt-2">{dict.financials.splitHelp}</p>
+              <details className="mt-3 text-[11px] text-muted">
+                <summary className="cursor-pointer text-secondary hover:text-primary">
+                  {isAr ? "تفاصيل قاعدة التوزيع" : "How the split works"}
+                </summary>
+                <p className="mt-1.5 leading-relaxed">{dict.financials.splitHelp}</p>
+              </details>
+            </PageSection>
           </>
         )}
 
-        <div className="glass-card rounded-2xl p-4 sm:p-5 space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <h3 className="text-sm font-semibold text-primary">{dict.financials.outstandingTitle}</h3>
-            {totalOutstanding > 0 && (
+        <PageSection
+          title={dict.financials.outstandingTitle}
+          actions={
+            totalOutstanding > 0 ? (
               <span className="font-mono text-xs font-bold text-rose-500">
                 {totalOutstanding.toLocaleString()} {currency}
               </span>
-            )}
-          </div>
+            ) : undefined
+          }
+        >
 
           {isLoading ? (
             <div className="grid grid-cols-1 gap-3">
@@ -554,7 +555,7 @@ export default function FinancialsPage() {
               })}
             </div>
           )}
-        </div>
+        </PageSection>
 
         <DataTable
             columns={ledgerColumns}

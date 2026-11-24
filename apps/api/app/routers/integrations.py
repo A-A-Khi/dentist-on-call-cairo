@@ -29,7 +29,7 @@ from app.models.identity import DoctorProfile, Organization, User
 from app.models.operations import FinancialCategory, FinancialTransaction
 from app.models.patients import MedicalHistory, Patient, PatientCareAssignment, Visit, VisitProcedure
 from app.models.scheduling import Appointment, AppointmentStatusEvent
-from app.services.revenue_split import visit_share_snapshot
+from app.services.revenue_split import persist_doctor_month_shares, visit_share_snapshot
 
 router = APIRouter(prefix="/integrations", tags=["integrations"])
 
@@ -478,6 +478,7 @@ def sync_doctor_visit(
     )
     session.add(visit)
     session.flush()
+    persist_doctor_month_shares(session, doctor.id, completed_at)
 
     session.add(
         VisitProcedure(

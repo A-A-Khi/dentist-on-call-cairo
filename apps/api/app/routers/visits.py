@@ -29,7 +29,11 @@ from app.models.operations import CaseStream, FinancialCategory, FinancialTransa
 from app.models.patients import Patient, Visit, VisitProcedure
 from app.models.scheduling import Appointment, AppointmentStatusEvent
 from app.services.clinical_purge import purge_visits
-from app.services.revenue_split import serialize_revenue_share, visit_share_snapshot
+from app.services.revenue_split import (
+    persist_doctor_month_shares,
+    serialize_visit_revenue_share,
+    visit_share_snapshot,
+)
 
 router = APIRouter(tags=["visits"])
 
@@ -173,15 +177,7 @@ def _serialize_visit(
                 "remainingEGP": max(total - paid, 0),
                 "caseCostEGP": case_cost,
                 "caseCostNote": visit.case_cost_note,
-                "revenueShare": serialize_revenue_share(
-                    doctor_percent=visit.doctor_share_percent,
-                    assistant_percent=visit.assistant_share_percent,
-                    referral_percent=visit.referral_share_percent,
-                    org_percent=visit.org_share_percent,
-                    paid_egp=paid,
-                    case_cost_egp=case_cost,
-                    case_cost_note=visit.case_cost_note,
-                ),
+                "revenueShare": serialize_visit_revenue_share(session, visit),
             }
         )
     return payload
@@ -440,6 +436,7 @@ def create_visit(
         visit_source_stream_id = stream.id
 
     shares = visit_share_snapshot(session, visit_source_stream_id)
+    occurred_at = datetime.now(UTC)
 
     visit = Visit(
         id=uuid4(),
@@ -447,7 +444,7 @@ def create_visit(
         patient_id=patient.id,
         doctor_id=doc_profile.id,
         appointment_id=linked_appointment.id if linked_appointment else None,
-        occurred_at=datetime.now(UTC),
+        occurred_at=occurred_at,
         chief_complaint=payload.chief_complaint,
         clinical_findings=payload.clinical_findings,
         diagnosis_text=payload.diagnosis,
@@ -466,6 +463,14 @@ def create_visit(
     )
     session.add(visit)
     session.flush()
+    persist_doctor_month_shares(session, doc_profile.id, occurred_at)
+    session.refresh(visit)
+    shares = {
+        "doctor": visit.doctor_share_percent,
+        "assistant": visit.assistant_share_percent,
+        "referral": visit.referral_share_percent,
+        "org": visit.org_share_percent,
+    }
 
     if linked_appointment is not None and visit_status_enum == VisitStatus.COMPLETED:
         if linked_appointment.status != AppointmentStatus.COMPLETED:
@@ -564,15 +569,7 @@ def create_visit(
                 "remainingEGP": total_cost_egp - paid_egp,
                 "caseCostEGP": case_cost_egp,
                 "caseCostNote": case_cost_note,
-                "revenueShare": serialize_revenue_share(
-                    doctor_percent=shares["doctor"],
-                    assistant_percent=shares["assistant"],
-                    referral_percent=shares["referral"],
-                    org_percent=shares["org"],
-                    paid_egp=paid_egp,
-                    case_cost_egp=case_cost_egp,
-                    case_cost_note=case_cost_note,
-                ),
+                "revenueShare": serialize_visit_revenue_share(session, visit),
             }
         )
     return result
@@ -670,10 +667,9 @@ def update_visit(
                     )
                 visit.source_stream_id = stream.id
             shares = visit_share_snapshot(session, visit.source_stream_id)
-            visit.doctor_share_percent = shares["doctor"]
             visit.assistant_share_percent = shares["assistant"]
             visit.referral_share_percent = shares["referral"]
-            visit.org_share_percent = shares["org"]
+            # Doctor/org percents are rewritten by monthly progressive recalc below.
 
     paid_requested = (
         current_user.role == UserRole.ADMIN
@@ -751,6 +747,8 @@ def update_visit(
     elif visit.status == VisitStatus.COMPLETED and payload.model_fields_set:
         visit.status = VisitStatus.AMENDED
 
+    persist_doctor_month_shares(session, visit.doctor_id, visit.occurred_at)
+
     session.add(
         AuditLog(
             id=uuid4(),
@@ -803,7 +801,10 @@ def delete_visit(
 
     paid_egp = _egp(visit.paid_amount_minor)
     total_egp = _egp(visit.total_cost_minor)
+    doctor_id = visit.doctor_id
+    occurred_at = visit.occurred_at
     purge_visits(session, [visit])
+    persist_doctor_month_shares(session, doctor_id, occurred_at)
     session.add(
         AuditLog(
             id=uuid4(),
@@ -876,6 +877,8 @@ def record_visit_payment(
         ),
     )
 
+    persist_doctor_month_shares(session, visit.doctor_id, visit.occurred_at)
+
     session.add(
         AuditLog(
             id=uuid4(),
@@ -896,6 +899,7 @@ def record_visit_payment(
         )
     )
     session.commit()
+    session.refresh(visit)
 
     return {
         "id": str(visit.id),
@@ -904,13 +908,5 @@ def record_visit_payment(
         "remainingEGP": new_remaining,
         "caseCostEGP": _egp(visit.case_cost_minor),
         "caseCostNote": visit.case_cost_note,
-        "revenueShare": serialize_revenue_share(
-            doctor_percent=visit.doctor_share_percent,
-            assistant_percent=visit.assistant_share_percent,
-            referral_percent=visit.referral_share_percent,
-            org_percent=visit.org_share_percent,
-            paid_egp=_egp(visit.paid_amount_minor),
-            case_cost_egp=_egp(visit.case_cost_minor),
-            case_cost_note=visit.case_cost_note,
-        ),
+        "revenueShare": serialize_visit_revenue_share(session, visit),
     }

@@ -21,7 +21,7 @@ from app.models.identity import DoctorProfile, User
 from app.models.operations import FinancialTransaction
 from app.models.patients import Patient, Visit
 from app.models.scheduling import Appointment
-from app.services.revenue_split import allocate_egp, split_basis_egp
+from app.services.revenue_split import compute_share_amounts_for_orm_visits, split_basis_egp
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
@@ -142,21 +142,17 @@ def _month_finance(session: DatabaseSession, org_id: UUID) -> dict[str, Any]:
     clinic_share = 0
     by_day: dict[str, dict[str, int]] = defaultdict(lambda: {"paidEGP": 0, "clinicShareEGP": 0})
 
+    share_by_visit = compute_share_amounts_for_orm_visits(visits)
     for visit in visits:
         paid = _egp(visit.paid_amount_minor)
         if paid <= 0:
             continue
-        case_cost = _egp(visit.case_cost_minor)
-        basis = split_basis_egp(paid, case_cost)
-        shares = allocate_egp(
-            basis,
-            {
-                "doctor": visit.doctor_share_percent,
-                "assistant": visit.assistant_share_percent,
-                "referral": visit.referral_share_percent,
-                "org": visit.org_share_percent,
-            },
-        )
+        shares = share_by_visit.get(visit.id) or {
+            "doctor": 0,
+            "assistant": 0,
+            "referral": 0,
+            "org": split_basis_egp(paid, _egp(visit.case_cost_minor)),
+        }
         gross_collected += paid
         clinic_share += shares["org"]
         day_key = visit.occurred_at.astimezone(UTC).date().isoformat()

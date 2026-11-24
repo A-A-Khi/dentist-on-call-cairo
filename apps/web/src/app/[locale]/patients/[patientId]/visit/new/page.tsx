@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { AppShell } from "../../../../../../components/layout/AppShell";
 import { PageHeader } from "../../../../../../components/layout/PageHeader";
+import { PageSection } from "../../../../../../components/layout/PageSection";
 import { Breadcrumb } from "../../../../../../components/layout/Breadcrumb";
 import { Textarea } from "../../../../../../components/ui/Textarea";
 import { Button, ButtonLink } from "../../../../../../components/ui/Button";
@@ -42,10 +43,27 @@ function NewVisitPageContent() {
   const [sourceStreamId, setSourceStreamId] = useState("");
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [activeStep, setActiveStep] = useState("clinical");
 
   useEffect(() => {
     setIsAdmin((getStoredSessionUser()?.role ?? "DOCTOR") === "ADMIN");
   }, []);
+
+  const formSteps = [
+    { id: "source", label: locale === "ar" ? "المصدر" : "Source" },
+    { id: "clinical", label: locale === "ar" ? "سريري" : "Clinical" },
+    { id: "procedures", label: locale === "ar" ? "إجراءات" : "Procedures" },
+    ...(isAdmin
+      ? [{ id: "finance", label: locale === "ar" ? "مالي" : "Finance" }]
+      : []),
+    { id: "notes", label: locale === "ar" ? "ملاحظات" : "Notes" },
+  ];
+
+  function goToStep(id: string) {
+    setActiveStep(id);
+    const el = document.getElementById(`visit-step-${id}`);
+    el?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 
   // Visits can only start from a calendar booking — keep doctors on that path.
   useEffect(() => {
@@ -242,7 +260,7 @@ function NewVisitPageContent() {
 
   return (
     <AppShell locale={locale}>
-          <div className="max-w-4xl mx-auto space-y-6 pb-28">
+          <div className="max-w-4xl mx-auto space-y-4 pb-28">
             <PageHeader
               breadcrumb={
                 <Breadcrumb
@@ -259,6 +277,21 @@ function NewVisitPageContent() {
               subtitle={`${dict.visitNew.patientContext}: ${patient.fullName} (${patient.code})${patient.assignedDoctor ? ` • ${dict.patients.table.assignedDoctor}: ${patient.assignedDoctor}` : ""}`}
             />
 
+            <nav className="form-step-tabs sticky top-0 z-20 -mx-1 px-1 py-2 bg-[color-mix(in_srgb,var(--bg-main)_88%,transparent)] backdrop-blur-md" aria-label="Visit steps">
+              {formSteps.map((step, index) => (
+                <button
+                  key={step.id}
+                  type="button"
+                  className="form-step-tab"
+                  data-active={activeStep === step.id}
+                  onClick={() => goToStep(step.id)}
+                >
+                  <span className="form-step-index">{index + 1}</span>
+                  {step.label}
+                </button>
+              ))}
+            </nav>
+
               {appointmentId ? (
                 <div className="flex items-center gap-2 rounded-xl border border-[#caa95a]/30 bg-[#caa95a]/10 px-3 py-2 text-xs text-gold">
                   <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -272,7 +305,6 @@ function NewVisitPageContent() {
                 </div>
               ) : null}
 
-              {/* Medical Alerts Banner */}
               {patient.medicalAlerts.length > 0 && (
                 <div className="flex items-center gap-2 rounded-xl border border-rose-500/30 bg-rose-50 px-3 py-2 text-xs text-rose-700">
                   <svg className="h-4 w-4 shrink-0 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -282,20 +314,21 @@ function NewVisitPageContent() {
                 </div>
               )}
 
-            {/* Referrer / Case Stream — per visit */}
-            <div className="glass-card rounded-2xl p-5 sm:p-6 space-y-3">
-              <div>
-                <h3 className="text-sm font-semibold text-primary">
-                  {dict.visitNew.referrerTitle}
-                </h3>
-                <p className="text-xs text-secondary mt-0.5">{dict.visitNew.referrerHelp}</p>
-                {patient.sourceStream ? (
-                  <p className="text-[11px] text-muted mt-1">
-                    {dict.visitNew.patientLastSource}:{" "}
-                    <span className="text-secondary font-medium">{patient.sourceStream}</span>
-                  </p>
-                ) : null}
-              </div>
+            <div id="visit-step-source">
+            <PageSection
+              title={dict.visitNew.referrerTitle}
+              description={
+                <>
+                  {dict.visitNew.referrerHelp}
+                  {patient.sourceStream ? (
+                    <span className="block mt-1">
+                      {dict.visitNew.patientLastSource}:{" "}
+                      <span className="text-secondary font-medium">{patient.sourceStream}</span>
+                    </span>
+                  ) : null}
+                </>
+              }
+            >
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
                 <div className="sm:col-span-2">
                   <label className="block text-[11px] font-semibold text-secondary mb-1">
@@ -304,7 +337,7 @@ function NewVisitPageContent() {
                   <select
                     value={sourceStreamId}
                     onChange={(e) => setSourceStreamId(e.target.value)}
-                    className="w-full glass rounded-xl px-3 py-2 text-xs text-primary focus:border-[#caa95a] focus:outline-none"
+                    className="w-full glass-input rounded-lg px-3 py-2 text-xs text-primary"
                   >
                     <option value="">{dict.visitNew.oursSource}</option>
                     {streams.map((stream) => (
@@ -327,25 +360,25 @@ function NewVisitPageContent() {
                   </div>
                 ) : null}
               </div>
+            </PageSection>
             </div>
 
-            {/* Section 1: Chief Complaint */}
-            <div className="glass-card rounded-2xl p-5 sm:p-6 space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-semibold text-primary">
-                    1. {locale === "ar" ? "الشكوى الرئيسية للمريض (Chief Complaint)" : "Patient Chief Complaint"}
-                  </h3>
-                  <p className="text-xs text-secondary mt-0.5">
-                    {locale === "ar" ? "سبب حضور المريض أو حجز الموعد بكلماته الخاصة" : "Document the presenting symptom or reservation request"}
-                  </p>
-                </div>
-                {queryComplaint && (
+            <div id="visit-step-clinical" className="space-y-4">
+            <PageSection
+              title={locale === "ar" ? "الشكوى الرئيسية" : "Chief complaint"}
+              description={
+                locale === "ar"
+                  ? "سبب حضور المريض أو حجز الموعد بكلماته الخاصة"
+                  : "Document the presenting symptom or reservation request"
+              }
+              actions={
+                queryComplaint ? (
                   <Badge variant="gold" size="sm">
                     {locale === "ar" ? "مستورد من الحجز" : "From Reservation"}
                   </Badge>
-                )}
-              </div>
+                ) : undefined
+              }
+            >
 
               {/* Quick Symptom Chips */}
               <div className="flex flex-wrap items-center gap-1.5 pt-1">
@@ -367,14 +400,13 @@ function NewVisitPageContent() {
                 rows={2}
                 placeholder={locale === "ar" ? "اكتب شكوى المريض الرئيسية..." : "Enter patient's chief complaint in their own words..."}
               />
-            </div>
+            </PageSection>
 
-            {/* Section 2: Clinical Findings & Diagnosis */}
-            <div className="glass-card rounded-2xl p-5 sm:p-6 space-y-4">
-              <h3 className="text-sm font-semibold text-primary">
-                2. {locale === "ar" ? "الفحص السريري والتشخيص الطبي (Examination & Diagnosis)" : "Clinical Examination & Diagnosis"}
-              </h3>
-
+            <PageSection
+              title={
+                locale === "ar" ? "الفحص والتشخيص" : "Examination & diagnosis"
+              }
+            >
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Textarea
                   label={locale === "ar" ? "نتائج الفحص داخل الفم (Clinical Findings)" : "Intraoral Clinical Findings"}
@@ -391,28 +423,23 @@ function NewVisitPageContent() {
                   placeholder={locale === "ar" ? "التشخيص مع تحديد رقم السن/الضرس المتأثر..." : "Definitive diagnosis with tooth numbering..."}
                 />
               </div>
+            </PageSection>
             </div>
 
-            {/* Section 3: Procedures Executed & Price List Catalog */}
-            <div className="glass-card rounded-2xl p-5 sm:p-6 space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                  <h3 className="text-sm font-semibold text-primary">
-                    3. {locale === "ar" ? "الإجراءات المنفذة والتسعير (Procedures & Fees)" : "Procedures Executed & Clinical Fees"}
-                  </h3>
-                  <p className="text-xs text-secondary mt-0.5">
-                    {locale === "ar"
-                      ? "اختر من لائحة الأسعار الرسمية أو حدد إجراءً يدوياً بسعر مخصص"
-                      : "Choose from standard fee schedule or sign a manual custom procedure"}
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Button type="button" variant="secondary" size="xs" onClick={addManualProcedure}>
-                    + {locale === "ar" ? "إجراء يدوي بسعر مخصص" : "Manual / Custom Procedure"}
-                  </Button>
-                </div>
-              </div>
+            <div id="visit-step-procedures">
+            <PageSection
+              title={locale === "ar" ? "الإجراءات والتسعير" : "Procedures & fees"}
+              description={
+                locale === "ar"
+                  ? "اختر من لائحة الأسعار الرسمية أو حدد إجراءً يدوياً بسعر مخصص"
+                  : "Choose from standard fee schedule or add a custom procedure"
+              }
+              actions={
+                <Button type="button" variant="secondary" size="xs" onClick={addManualProcedure}>
+                  + {locale === "ar" ? "إجراء يدوي" : "Manual procedure"}
+                </Button>
+              }
+            >
 
               {/* Price List Catalog Quick Selector */}
               <div className="glass rounded-xl p-3 space-y-2">
@@ -559,25 +586,23 @@ function NewVisitPageContent() {
                     </div>
                   ))
                 )}
+              </div>
 
-                {/* Financial Ledger Attestation Card — admin only */}
-                {procedures.length > 0 && isAdmin && (
-                  <div className="rounded-2xl border border-[#caa95a]/40 bg-gradient-to-br from-[#caa95a]/10 via-white to-slate-50 p-4 space-y-3 shadow-xl">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b glass-divider pb-3">
-                      <div>
-                        <span className="text-xs font-semibold text-gold block">
-                          {dict.visitNew.totalCost}
-                        </span>
-                        <span className="text-[11px] text-secondary">
-                          {dict.visitNew.paymentHint}
-                        </span>
-                      </div>
-                      <div className="text-end sm:text-right rtl:sm:text-left">
-                        <span className="text-xl font-mono font-bold text-gold">
-                          {totalCost.toLocaleString()} {dict.patientProfile.currency}
-                        </span>
-                      </div>
-                    </div>
+              </PageSection>
+            </div>
+
+            {procedures.length > 0 && isAdmin && (
+              <div id="visit-step-finance">
+                <PageSection
+                  title={dict.visitNew.totalCost}
+                  description={dict.visitNew.paymentHint}
+                  actions={
+                    <span className="text-xl font-mono font-bold text-gold">
+                      {totalCost.toLocaleString()} {dict.patientProfile.currency}
+                    </span>
+                  }
+                >
+                  <div className="rounded-2xl border border-[#caa95a]/40 bg-gradient-to-br from-[#caa95a]/10 via-white to-slate-50 p-4 space-y-3">
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
@@ -660,7 +685,10 @@ function NewVisitPageContent() {
                         <p className="text-[11px] font-semibold text-secondary">{dict.visitNew.splitPreview}</p>
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
                           <div>
-                            <span className="text-muted block">{dict.patientProfile.shareDoctor} 35%</span>
+                            <span className="text-muted block">
+                              {dict.patientProfile.shareDoctor}{" "}
+                              {locale === "ar" ? "(تقديري · متدرج)" : "(est. · tiered)"}
+                            </span>
                             <span className="font-mono font-semibold text-primary">
                               {doctorShareEGP.toLocaleString()} {dict.patientProfile.currency}
                             </span>
@@ -689,16 +717,18 @@ function NewVisitPageContent() {
                       </div>
                     )}
                   </div>
-                )}
+                </PageSection>
               </div>
-            </div>
+            )}
 
-            {/* Section 4: Prescriptions & Doctor Notes */}
-            <div className="glass-card rounded-2xl p-5 sm:p-6 space-y-4">
-              <h3 className="text-sm font-semibold text-primary">
-                4. {locale === "ar" ? "الوصفة الطبية وتوصيات الرعاية المنزلية" : "Prescriptions & Home Care Instructions"}
-              </h3>
-
+            <div id="visit-step-notes">
+            <PageSection
+              title={
+                locale === "ar"
+                  ? "الوصفة وتوصيات الرعاية"
+                  : "Prescriptions & home care"
+              }
+            >
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Textarea
                   label={locale === "ar" ? "الروشتة الدوائية (Rx Prescriptions)" : "Prescriptions (Rx)"}
@@ -715,6 +745,7 @@ function NewVisitPageContent() {
                   placeholder={locale === "ar" ? "ملاحظات الاستدعاء، مواعيد تبديل الحشو، جلسة المتابعة..." : "Recall interval, post-op instructions, planned second stage..."}
                 />
               </div>
+            </PageSection>
             </div>
           </div>
 

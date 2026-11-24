@@ -15,7 +15,11 @@
     "activity": "Audit Activity",
     "settings": "Settings",
     "logout": "Sign Out",
-    "profile": "Profile"
+    "profile": "Profile",
+    "more": "More",
+    "sectionCare": "Care",
+    "sectionFinance": "Finance",
+    "sectionAdmin": "Admin"
   },
   "auth": {
     "signInTitle": "Sign In to Your Account",
@@ -274,7 +278,7 @@
     "fullyPaid": "Fully paid",
     "partialPayment": "Partial payment — debt will stay on the patient chart",
     "caseCosts": "Case costs (lab, materials…)",
-    "caseCostsHint": "Deducted before doctor / assistant / referrer percentages.",
+    "caseCostsHint": "Deducted before doctor (tiered on monthly net) / assistant / referrer percentages.",
     "caseCostsNote": "Cost note",
     "caseCostsNotePlaceholder": "e.g. Laboratory",
     "splitBasis": "Amount after costs",
@@ -287,7 +291,7 @@
     "patientLastSource": "Patient registration source",
     "noStreams": "No external case streams yet — add them in Settings. You can still save as Dentist on Call.",
     "saveError": "Could not save the visit. Check your connection and try again.",
-    "splitPreview": "Estimated split after deducting case costs"
+    "splitPreview": "Estimated split after case costs (final doctor share is tiered by their monthly net)"
   },
   "visitEdit": {
     "title": "Edit Clinical Visit",
@@ -362,11 +366,11 @@
       "avgCase": "Avg Case Value",
       "clinicShare": "Clinic Share (EGP)",
       "caseCosts": "Case Costs (EGP)",
-      "doctorShare": "Doctor 35%",
+      "doctorShare": "Doctor (tiered)",
       "assistantShare": "Assistant 15%",
       "referralShare": "Referrer Share"
     },
-    "splitHelp": "Net clinic profit = clinic share after case costs, doctor 35%, assistant 15%, and referrer % − expenses.",
+    "splitHelp": "Net clinic profit = clinic share after case costs, tiered doctor share on monthly net cases (35% to 50k, then 20% to 100k, then 10% to 200k, then 5%), assistant 15%, and referrer % − expenses. Applies from 11 Nov 2026.",
     "transactionRegister": "Clinical Transactions Register",
     "postTransaction": "+ Post Transaction",
     "editTransaction": "Edit entry",
@@ -486,9 +490,9 @@
     "categoriesTitle": "Financial Categories",
     "categoriesHelp": "Define expense and revenue categories (e.g. Social Media Ads, Materials) used when posting ledger entries.",
     "streamsTitle": "Case Acquisition Streams",
-    "streamsHelp": "Define where cases come from. Ads / Walk-in = owned channels (referrer 0% — clinic keeps the remainder after doctor 35% + assistant 15%). Partner clinics and other referrers: set their % here. Fixed: doctor 35%, assistant 15%; remainder is Dentist on Call.",
+    "streamsHelp": "Define where cases come from. Ads / Walk-in = owned channels (referrer 0%). Partner clinics and other referrers: set their % here. Doctor share is tiered on monthly net after case costs; assistant 15% is fixed; remainder is Dentist on Call.",
     "referralPercent": "Referrer %",
-    "referralPercentHelp": "0–50%. Use 0 for ads and walk-in (fully owned after team cuts). Doctor 35% + assistant 15% are fixed; the rest goes to Dentist on Call.",
+    "referralPercentHelp": "0–50%. Use 0 for ads and walk-in. Doctor share is tiered (35→5% by monthly net); assistant 15% is fixed; the rest goes to Dentist on Call.",
     "clinicName": "Clinic Legal Name",
     "timezone": "Timezone",
     "defaultLocale": "Default Interface Language",

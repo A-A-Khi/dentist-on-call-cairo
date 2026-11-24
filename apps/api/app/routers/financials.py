@@ -12,7 +12,7 @@ from app.models.enums import TransactionStatus, TransactionType, UserRole
 from app.models.identity import DoctorProfile, User
 from app.models.operations import FinancialCategory, FinancialTransaction
 from app.models.patients import Patient, Visit
-from app.services.revenue_split import allocate_egp, split_basis_egp
+from app.services.revenue_split import compute_share_amounts_for_orm_visits, split_basis_egp
 
 router = APIRouter(prefix="/financials", tags=["financials"])
 
@@ -273,21 +273,19 @@ def financial_summary(
     referral_share = 0
     clinic_share = 0
 
+    share_by_visit = compute_share_amounts_for_orm_visits(visits)
     for visit in visits:
         paid_egp = (visit.paid_amount_minor or 0) // 100
         if paid_egp <= 0:
             continue
         case_cost_egp = (visit.case_cost_minor or 0) // 100
-        basis_egp = split_basis_egp(paid_egp, case_cost_egp)
-        amounts = allocate_egp(
-            basis_egp,
-            {
-                "doctor": visit.doctor_share_percent,
-                "assistant": visit.assistant_share_percent,
-                "referral": visit.referral_share_percent,
-                "org": visit.org_share_percent,
-            },
-        )
+        amounts = share_by_visit.get(visit.id) or {
+            "doctor": 0,
+            "assistant": 0,
+            "referral": 0,
+            "org": 0,
+            "basis": split_basis_egp(paid_egp, case_cost_egp),
+        }
         gross_collected += paid_egp
         total_case_costs += case_cost_egp
         doctor_share += amounts["doctor"]

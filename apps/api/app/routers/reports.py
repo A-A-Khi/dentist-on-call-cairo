@@ -15,7 +15,7 @@ from app.models.enums import UserRole, VisitStatus
 from app.models.identity import DoctorProfile, User
 from app.models.operations import CaseStream
 from app.models.patients import Patient, Visit, VisitProcedure
-from app.services.revenue_split import allocate_egp, split_basis_egp
+from app.services.revenue_split import compute_share_amounts_with_month_context, split_basis_egp
 
 router = APIRouter(prefix="/reports", tags=["reports"])
 
@@ -164,6 +164,9 @@ def reports_analytics(
     visit_ids: list[UUID] = []
     cases: list[dict[str, Any]] = []
 
+    share_by_visit = compute_share_amounts_with_month_context(
+        session, [visit for visit, _ in rows]
+    )
     for visit, patient in rows:
         visit_ids.append(visit.id)
         patient_ids.add(patient.id)
@@ -171,15 +174,16 @@ def reports_analytics(
         total = _egp(visit.total_cost_minor)
         case_cost = _egp(visit.case_cost_minor)
         basis = split_basis_egp(paid, case_cost)
-        shares = allocate_egp(
-            basis,
-            {
-                "doctor": visit.doctor_share_percent,
-                "assistant": visit.assistant_share_percent,
-                "referral": visit.referral_share_percent,
-                "org": visit.org_share_percent,
-            },
-        )
+        shares = share_by_visit.get(visit.id) or {
+            "doctor": 0,
+            "assistant": 0,
+            "referral": 0,
+            "org": 0,
+            "doctor_percent": visit.doctor_share_percent,
+            "assistant_percent": visit.assistant_share_percent,
+            "referral_percent": visit.referral_share_percent,
+            "org_percent": visit.org_share_percent,
+        }
         cases.append(
             {
                 "visitId": str(visit.id),
@@ -193,10 +197,10 @@ def reports_analytics(
                 "assistantEGP": shares["assistant"],
                 "referralEGP": shares["referral"],
                 "clinicEGP": shares["org"],
-                "doctorPercent": visit.doctor_share_percent,
-                "assistantPercent": visit.assistant_share_percent,
-                "referralPercent": visit.referral_share_percent,
-                "orgPercent": visit.org_share_percent,
+                "doctorPercent": shares.get("doctor_percent", visit.doctor_share_percent),
+                "assistantPercent": shares.get("assistant_percent", visit.assistant_share_percent),
+                "referralPercent": shares.get("referral_percent", visit.referral_share_percent),
+                "orgPercent": shares.get("org_percent", visit.org_share_percent),
             }
         )
 

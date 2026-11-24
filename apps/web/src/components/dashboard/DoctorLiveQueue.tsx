@@ -1,8 +1,10 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { PageSection } from "../layout/PageSection";
 import { ButtonLink } from "../ui/Button";
 import { SkeletonCard, SkeletonMetricHero, SkeletonTable } from "../ui/Skeleton";
+import { StatCard } from "../ui/StatCard";
 import { fetchDashboardOverview } from "../../lib/clinical-api";
 import type { Appointment, DashboardOverview } from "../../lib/clinical-data";
 
@@ -88,42 +90,28 @@ export function DoctorLiveQueue({ locale }: DoctorLiveQueueProps) {
         </p>
       </section>
 
-      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div className="glass-card rounded-xl px-4 py-3.5 animate-fade-in-up stagger-1">
-          <p className="text-[11px] text-muted">
-            {isAr ? "مرضاي في نطاق الرعاية" : "Patients in care scope"}
-          </p>
-          <p className="mt-1 text-xl font-semibold text-primary tabular-nums leading-none">
-            {formatCount(patientsInCare, locale)}
-          </p>
-          <p className="mt-1.5 text-[11px] text-secondary">
-            {isAr ? "تعيين نشط أو جدول حالي" : "Active assignment or schedule"}
-          </p>
-        </div>
-        <div className="glass-card rounded-xl px-4 py-3.5 animate-fade-in-up stagger-2">
-          <p className="text-[11px] text-muted">{isAr ? "الجاهزية" : "Availability"}</p>
-          <p className="mt-1 text-xl font-semibold text-primary leading-none">
-            {isAr ? "تحت الطلب" : "On call"}
-          </p>
-          <p className="mt-1.5 text-[11px] text-secondary">
-            {isAr ? "طوارئ القاهرة نشطة" : "Cairo emergency active"}
-          </p>
-        </div>
-      </section>
+      <div className="stat-grid !grid-cols-1 sm:!grid-cols-2 animate-fade-in-up">
+        <StatCard
+          label={isAr ? "مرضاي في نطاق الرعاية" : "Patients in care scope"}
+          value={formatCount(patientsInCare, locale)}
+          hint={isAr ? "تعيين نشط أو جدول حالي" : "Active assignment or schedule"}
+        />
+        <StatCard
+          label={isAr ? "الجاهزية" : "Availability"}
+          value={isAr ? "تحت الطلب" : "On call"}
+          hint={isAr ? "طوارئ القاهرة نشطة" : "Cairo emergency active"}
+          tone="gold"
+        />
+      </div>
 
-      <section className="glass-card rounded-2xl overflow-hidden animate-fade-in-up stagger-3">
-        <div className="border-b border-[var(--border-subtle)] px-5 py-3.5">
-          <h3 className="text-sm font-semibold text-primary">
-            {isAr ? "طابور المرضى لليوم" : "Clinical patient queue"}
-          </h3>
-          <p className="mt-0.5 text-[11px] text-muted">
-            {isAr
-              ? "تنبيهات سريرية وتسجيل زيارة فوري"
-              : "Medical alerts and visit launcher"}
-          </p>
-        </div>
-
-        <div className="divide-y divide-slate-100">
+      <PageSection
+        className="animate-fade-in-up stagger-3"
+        title={isAr ? "طابور المرضى لليوم" : "Clinical patient queue"}
+        description={
+          isAr ? "تنبيهات سريرية وتسجيل زيارة فوري" : "Medical alerts and visit launcher"
+        }
+      >
+        <div className="divide-y divide-slate-100 -mx-1">
           {appointments.length > 0 ? (
             appointments.map((apt) => (
               <div key={apt.id} className="px-5 py-4 transition-colors hover:bg-slate-50/60">
@@ -180,7 +168,7 @@ export function DoctorLiveQueue({ locale }: DoctorLiveQueueProps) {
             </div>
           )}
         </div>
-      </section>
+      </PageSection>
     </>
   );
 }

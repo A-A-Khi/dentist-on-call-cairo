@@ -111,6 +111,18 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     except Exception as exc:
         log.warning("Schema forward-compat patch skipped: %s", exc)
 
+    try:
+        from app.database.session import SessionLocal
+        from app.services.revenue_split import backfill_progressive_doctor_shares
+
+        with SessionLocal() as session:
+            months = backfill_progressive_doctor_shares(session)
+            session.commit()
+            if months:
+                log.info("Progressive doctor-share backfill touched %s doctor-month(s)", months)
+    except Exception as exc:
+        log.warning("Progressive doctor-share backfill skipped: %s", exc)
+
     if settings.app_env == "development":
         try:
             import app.models  # noqa: F401

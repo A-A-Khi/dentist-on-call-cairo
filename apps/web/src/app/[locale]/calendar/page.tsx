@@ -8,6 +8,7 @@ import { Badge } from "../../../components/ui/Badge";
 import { Modal } from "../../../components/ui/Modal";
 import { Button, ButtonLink } from "../../../components/ui/Button";
 import { Input } from "../../../components/ui/Input";
+import { StatCard } from "../../../components/ui/StatCard";
 import { INITIAL_DOCTORS } from "../../../lib/clinical-data";
 import { fetchAppointments, fetchPatients, scheduleAppointment, deleteAppointment, deletePatientRecord } from "../../../lib/clinical-api";
 import { getDictionarySync } from "../../../i18n/get-dictionary";
@@ -504,24 +505,17 @@ function CalendarPageContent() {
           }
         />
 
-        {/* Compact metrics strip */}
-        <div className="grid grid-cols-3 gap-2 sm:gap-3">
-          <div className="glass-card rounded-xl px-3 py-2.5 sm:px-4">
-            <p className="text-[10px] font-medium text-secondary truncate">{metricLabel}</p>
-            <p className="text-xl font-bold text-primary">{metricBooked}</p>
-          </div>
-          <div className="glass-card rounded-xl px-3 py-2.5 sm:px-4">
-            <p className="text-[10px] font-medium text-secondary truncate">
-              {isAr ? "مؤكدة اليوم" : "Confirmed today"}
-            </p>
-            <p className="text-xl font-bold text-gold">{confirmedCount}</p>
-          </div>
-          <div className="glass-card rounded-xl px-3 py-2.5 sm:px-4">
-            <p className="text-[10px] font-medium text-secondary truncate">
-              {isAr ? "ساعات محجوزة" : "Busy hours"}
-            </p>
-            <p className="text-xl font-bold text-sky-500">{appointmentsByHour.size}</p>
-          </div>
+        <div className="stat-grid !grid-cols-3">
+          <StatCard label={metricLabel} value={metricBooked} />
+          <StatCard
+            label={isAr ? "مؤكدة اليوم" : "Confirmed today"}
+            value={confirmedCount}
+            tone="gold"
+          />
+          <StatCard
+            label={isAr ? "ساعات محجوزة" : "Busy hours"}
+            value={appointmentsByHour.size}
+          />
         </div>
 
         {/* Controls */}

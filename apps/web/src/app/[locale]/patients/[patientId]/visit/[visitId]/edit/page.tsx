@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { AppShell } from "../../../../../../../components/layout/AppShell";
 import { PageHeader } from "../../../../../../../components/layout/PageHeader";
+import { PageSection } from "../../../../../../../components/layout/PageSection";
 import { Breadcrumb } from "../../../../../../../components/layout/Breadcrumb";
 import { Textarea } from "../../../../../../../components/ui/Textarea";
 import { Button, ButtonLink } from "../../../../../../../components/ui/Button";
@@ -244,7 +245,7 @@ export default function EditVisitPage() {
 
   return (
     <AppShell locale={locale}>
-      <div className="max-w-4xl mx-auto space-y-6 pb-24">
+      <div className="max-w-4xl mx-auto space-y-4 pb-24">
         <PageHeader
           breadcrumb={
             <Breadcrumb
@@ -259,15 +260,35 @@ export default function EditVisitPage() {
           subtitle={patient.fullName}
         />
 
-        <div className="glass-card rounded-2xl p-5 sm:p-6 space-y-3">
-          <div>
-            <h3 className="text-sm font-semibold text-primary">{dict.visitNew.referrerTitle}</h3>
-            <p className="text-xs text-secondary mt-0.5">{dict.visitNew.referrerHelp}</p>
-          </div>
+        <nav className="form-step-tabs" aria-label="Edit visit steps">
+          {[
+            { id: "source", label: isAr ? "المصدر" : "Source" },
+            { id: "clinical", label: isAr ? "سريري" : "Clinical" },
+            { id: "procedures", label: isAr ? "إجراءات" : "Procedures" },
+            { id: "notes", label: isAr ? "ملاحظات" : "Notes" },
+          ].map((step, index) => (
+            <button
+              key={step.id}
+              type="button"
+              className="form-step-tab"
+              onClick={() =>
+                document
+                  .getElementById(`edit-step-${step.id}`)
+                  ?.scrollIntoView({ behavior: "smooth", block: "start" })
+              }
+            >
+              <span className="form-step-index">{index + 1}</span>
+              {step.label}
+            </button>
+          ))}
+        </nav>
+
+        <div id="edit-step-source">
+        <PageSection title={dict.visitNew.referrerTitle} description={dict.visitNew.referrerHelp}>
           <select
             value={sourceStreamId}
             onChange={(e) => setSourceStreamId(e.target.value)}
-            className="w-full glass rounded-xl px-3 py-2 text-xs text-primary focus:border-[#caa95a] focus:outline-none"
+            className="w-full glass-input rounded-lg px-3 py-2 text-xs text-primary"
           >
             <option value="">{dict.visitNew.oursSource}</option>
             {streams.map((stream) => (
@@ -278,21 +299,19 @@ export default function EditVisitPage() {
             ))}
           </select>
           {selectedStream ? (
-            <p className="text-[11px] text-muted">
+            <p className="text-[11px] text-muted mt-2">
               {dict.visitNew.referrerPercent}: {selectedStream.referralPercent ?? 0}%
             </p>
           ) : null}
+        </PageSection>
         </div>
 
-        <div className="glass-card rounded-2xl p-5 sm:p-6 space-y-3">
-          <h3 className="text-sm font-semibold text-primary">{dict.visitNew.chiefComplaint}</h3>
+        <div id="edit-step-clinical" className="space-y-4">
+        <PageSection title={dict.visitNew.chiefComplaint}>
           <Textarea value={chiefComplaint} onChange={(e) => setChiefComplaint(e.target.value)} rows={2} />
-        </div>
+        </PageSection>
 
-        <div className="glass-card rounded-2xl p-5 sm:p-6 space-y-4">
-          <h3 className="text-sm font-semibold text-primary">
-            {isAr ? "الفحص والتشخيص" : "Examination & Diagnosis"}
-          </h3>
+        <PageSection title={isAr ? "الفحص والتشخيص" : "Examination & Diagnosis"}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Textarea
               label={dict.visitNew.clinicalFindings}
@@ -307,15 +326,18 @@ export default function EditVisitPage() {
               rows={3}
             />
           </div>
+        </PageSection>
         </div>
 
-        <div className="glass-card rounded-2xl p-5 sm:p-6 space-y-4">
-          <div className="flex items-center justify-between gap-3">
-            <h3 className="text-sm font-semibold text-primary">{dict.visitNew.proceduresTitle}</h3>
+        <div id="edit-step-procedures">
+        <PageSection
+          title={dict.visitNew.proceduresTitle}
+          actions={
             <Button type="button" variant="secondary" size="xs" onClick={() => addProcedure()}>
               {dict.visitNew.addProcedure}
             </Button>
-          </div>
+          }
+        >
           <select
             defaultValue=""
             onChange={(e) => {
@@ -453,9 +475,11 @@ export default function EditVisitPage() {
             </div>
           </div>
           <p className="text-[11px] text-muted">{dict.visitEdit.paymentNote}</p>
+        </PageSection>
         </div>
 
-        <div className="glass-card rounded-2xl p-5 sm:p-6 space-y-4">
+        <div id="edit-step-notes">
+        <PageSection title={isAr ? "ملاحظات" : "Notes"}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Textarea
               label={dict.visitNew.prescriptions}
@@ -470,6 +494,7 @@ export default function EditVisitPage() {
               rows={3}
             />
           </div>
+        </PageSection>
         </div>
 
         {error && <p className="text-xs text-rose-600">{error}</p>}

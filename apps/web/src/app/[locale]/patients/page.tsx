@@ -16,6 +16,7 @@ import {
 } from "../../../components/ui/DataTable";
 import { EmptyState } from "../../../components/ui/EmptyState";
 import { Button, ButtonLink } from "../../../components/ui/Button";
+import { FilterBar } from "../../../components/ui/FilterBar";
 import { Modal } from "../../../components/ui/Modal";
 import { SkeletonTable } from "../../../components/ui/Skeleton";
 import { deletePatientRecord, fetchPatients } from "../../../lib/clinical-api";
@@ -254,8 +255,8 @@ function PatientsPageContent() {
         }
       />
 
-      <div className="filter-bar">
-        <div className="relative flex-1 w-full">
+      <FilterBar>
+        <div className="relative flex-1 min-w-[12rem]">
           <input
             type="text"
             value={searchQuery}
@@ -273,14 +274,14 @@ function PatientsPageContent() {
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="glass-input w-full sm:w-auto rounded-lg px-3 py-2 text-xs text-primary"
+          className="glass-input w-full sm:w-44 rounded-lg px-3 py-2 text-xs text-primary"
         >
           <option value="ALL">{dict.patients.filterStatus}</option>
           <option value="Active">Active</option>
           <option value="In Treatment">In Treatment</option>
           <option value="Follow-up">Follow-up</option>
         </select>
-      </div>
+      </FilterBar>
 
       {isLoading ? (
         <SkeletonTable rows={6} />

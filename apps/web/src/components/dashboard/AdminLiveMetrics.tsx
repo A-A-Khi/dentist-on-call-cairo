@@ -3,8 +3,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import type { Dictionary } from "../../i18n/get-dictionary";
+import { PageSection } from "../layout/PageSection";
 import { ButtonLink } from "../ui/Button";
 import { SkeletonCard, SkeletonMetricHero, SkeletonTable } from "../ui/Skeleton";
+import { StatCard } from "../ui/StatCard";
 import { fetchDashboardOverview } from "../../lib/clinical-api";
 import type { Appointment, DashboardOverview } from "../../lib/clinical-data";
 
@@ -184,52 +186,47 @@ export function AdminLiveMetrics({ locale, dict }: AdminLiveMetricsProps) {
         </div>
       </section>
 
-      {/* Secondary metrics */}
-      <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        {secondary.map((stat, i) => (
-          <div
-            key={stat.label}
-            className={`glass-card rounded-xl px-4 py-3.5 animate-fade-in-up stagger-${i + 1}`}
-          >
-            <p className="text-[11px] text-muted">{stat.label}</p>
-            <p className="mt-1 text-xl font-semibold text-primary tabular-nums leading-none">
-              {stat.value}
-            </p>
-            <p className="mt-1.5 text-[11px] text-secondary">{stat.meta}</p>
-          </div>
+      <div className="stat-grid !grid-cols-1 sm:!grid-cols-3 animate-fade-in-up">
+        {secondary.map((stat) => (
+          <StatCard key={stat.label} label={stat.label} value={stat.value} hint={stat.meta} />
         ))}
-      </section>
+      </div>
 
-      {/* Quick actions — flat accent, no icon tiles */}
-      <section className="flex flex-col gap-2 sm:flex-row sm:items-stretch sm:gap-3 animate-fade-in-up stagger-2">
-        {quickActions.map((action) => (
-          <Link
-            key={action.href}
-            href={action.href}
-            className="group flex flex-1 items-center justify-between gap-3 rounded-xl glass px-4 py-3.5 transition-all hover:border-[#caa95a]/40 hover:shadow-md hover:shadow-[#caa95a]/10"
-          >
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-primary">{action.title}</p>
-              <p className="text-[11px] text-muted">{action.hint}</p>
-            </div>
-            <span className="shrink-0 inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-[#dfbf70] via-[#caa95a] to-[#a8842d] px-3 py-1.5 text-[11px] font-semibold text-on-gold shadow-sm shadow-[#caa95a]/20 transition-transform group-hover:scale-[1.03]">
-              {isAr ? "فتح" : "Open"}
-            </span>
-          </Link>
-        ))}
-      </section>
+      <PageSection
+        card={false}
+        title={dict.dashboard.quickActions.title}
+        className="animate-fade-in-up stagger-2"
+      >
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch sm:gap-3">
+          {quickActions.map((action) => (
+            <Link
+              key={action.href}
+              href={action.href}
+              className="group flex flex-1 items-center justify-between gap-3 rounded-xl glass px-4 py-3.5 transition-all hover:border-[#caa95a]/40 hover:shadow-md hover:shadow-[#caa95a]/10"
+            >
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-primary">{action.title}</p>
+                <p className="text-[11px] text-muted">{action.hint}</p>
+              </div>
+              <span className="shrink-0 inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-[#dfbf70] via-[#caa95a] to-[#a8842d] px-3 py-1.5 text-[11px] font-semibold text-on-gold shadow-sm shadow-[#caa95a]/20 transition-transform group-hover:scale-[1.03]">
+                {isAr ? "فتح" : "Open"}
+              </span>
+            </Link>
+          ))}
+        </div>
+      </PageSection>
 
-      {/* Schedule + activity */}
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-3 animate-fade-in-up stagger-3">
-        <div className="lg:col-span-2 glass-card rounded-2xl overflow-hidden">
-          <div className="flex items-center justify-between gap-3 border-b border-[var(--border-subtle)] px-5 py-3.5">
-            <h3 className="text-sm font-semibold text-primary">{dict.dashboard.todaySchedule.title}</h3>
+        <PageSection
+          className="lg:col-span-2 overflow-hidden"
+          title={dict.dashboard.todaySchedule.title}
+          actions={
             <ButtonLink href={`/${locale}/calendar`} variant="accent" size="xs">
               {dict.dashboard.quickActions.viewCalendar}
             </ButtonLink>
-          </div>
-
-          <div className="hidden sm:block overflow-x-auto px-5 py-2">
+          }
+        >
+          <div className="hidden sm:block overflow-x-auto -mx-1">
             <table className="w-full text-left rtl:text-right text-xs">
               <thead>
                 <tr className="border-b border-[var(--border-subtle)] text-muted">
@@ -273,7 +270,7 @@ export function AdminLiveMetrics({ locale, dict }: AdminLiveMetricsProps) {
             </table>
           </div>
 
-          <div className="sm:hidden divide-y divide-slate-100 px-4 py-2">
+          <div className="sm:hidden divide-y divide-slate-100">
             {todayAppointments.length > 0 ? (
               todayAppointments.map((row) => (
                 <div key={row.id} className="py-3 space-y-1.5">
@@ -302,13 +299,17 @@ export function AdminLiveMetrics({ locale, dict }: AdminLiveMetricsProps) {
               </div>
             )}
           </div>
-        </div>
+        </PageSection>
 
-        <div className="glass-card rounded-2xl overflow-hidden">
-          <div className="border-b border-[var(--border-subtle)] px-5 py-3.5">
-            <h3 className="text-sm font-semibold text-primary">{dict.dashboard.activityLog.title}</h3>
-          </div>
-          <div className="space-y-0 divide-y divide-slate-100 px-5">
+        <PageSection
+          title={dict.dashboard.activityLog.title}
+          actions={
+            <ButtonLink href={`/${locale}/activity`} variant="accent" size="xs">
+              {dict.dashboard.activityLog.viewAll}
+            </ButtonLink>
+          }
+        >
+          <div className="space-y-0 divide-y divide-slate-100">
             {recentPatients.length > 0 ? (
               recentPatients.map((p) => (
                 <div key={p.id} className="py-3 text-xs space-y-1">
@@ -331,12 +332,7 @@ export function AdminLiveMetrics({ locale, dict }: AdminLiveMetricsProps) {
               </div>
             )}
           </div>
-          <div className="border-t border-[var(--border-subtle)] px-5 py-3 text-center">
-            <ButtonLink href={`/${locale}/activity`} variant="accent" size="xs">
-              {dict.dashboard.activityLog.viewAll}
-            </ButtonLink>
-          </div>
-        </div>
+        </PageSection>
       </section>
     </>
   );

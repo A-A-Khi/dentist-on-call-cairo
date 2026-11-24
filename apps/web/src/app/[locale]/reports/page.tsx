@@ -4,8 +4,11 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { AppShell } from "../../../components/layout/AppShell";
 import { PageHeader } from "../../../components/layout/PageHeader";
+import { PageSection } from "../../../components/layout/PageSection";
 import { Button } from "../../../components/ui/Button";
+import { FilterBar } from "../../../components/ui/FilterBar";
 import { SkeletonCard, SkeletonTable } from "../../../components/ui/Skeleton";
+import { StatCard } from "../../../components/ui/StatCard";
 import { fetchReportsAnalytics } from "../../../lib/clinical-api";
 import { getDictionarySync } from "../../../i18n/get-dictionary";
 import type { ReportAnalytics } from "../../../lib/clinical-data";
@@ -211,25 +214,24 @@ export default function ReportsPage() {
           }
         />
 
-        <div className="glass-card rounded-2xl p-4 space-y-3">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-            <span className="text-xs font-semibold text-secondary">{t.dateRange}</span>
-            <div className="flex items-center gap-1.5 flex-wrap">
-              {presets.map((p) => (
-                <Button
-                  key={p.id}
-                  type="button"
-                  size="xs"
-                  variant={preset === p.id ? "primary" : "ghost"}
-                  onClick={() => setPreset(p.id)}
-                >
-                  {p.label}
-                </Button>
-              ))}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <PageSection title={t.dateRange}>
+          <FilterBar
+            end={
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {presets.map((p) => (
+                  <Button
+                    key={p.id}
+                    type="button"
+                    size="xs"
+                    variant={preset === p.id ? "primary" : "ghost"}
+                    onClick={() => setPreset(p.id)}
+                  >
+                    {p.label}
+                  </Button>
+                ))}
+              </div>
+            }
+          >
             {preset === "custom" && (
               <>
                 <div>
@@ -238,7 +240,7 @@ export default function ReportsPage() {
                     type="date"
                     value={dateFrom}
                     onChange={(e) => setDateFrom(e.target.value)}
-                    className="w-full glass rounded-xl px-3 py-2 text-xs text-primary focus:border-[#caa95a] focus:outline-none"
+                    className="w-full min-w-[9rem] glass-input rounded-lg px-3 py-2 text-xs text-primary"
                   />
                 </div>
                 <div>
@@ -247,7 +249,7 @@ export default function ReportsPage() {
                     type="date"
                     value={dateTo}
                     onChange={(e) => setDateTo(e.target.value)}
-                    className="w-full glass rounded-xl px-3 py-2 text-xs text-primary focus:border-[#caa95a] focus:outline-none"
+                    className="w-full min-w-[9rem] glass-input rounded-lg px-3 py-2 text-xs text-primary"
                   />
                 </div>
               </>
@@ -257,7 +259,7 @@ export default function ReportsPage() {
               <select
                 value={streamId}
                 onChange={(e) => setStreamId(e.target.value)}
-                className="w-full glass rounded-xl px-3 py-2 text-xs text-primary focus:border-[#caa95a] focus:outline-none"
+                className="w-full min-w-[10rem] glass-input rounded-lg px-3 py-2 text-xs text-primary"
               >
                 <option value="">{t.allSources}</option>
                 {(data?.filterOptions.streams || []).map((s) => (
@@ -272,7 +274,7 @@ export default function ReportsPage() {
               <select
                 value={doctorId}
                 onChange={(e) => setDoctorId(e.target.value)}
-                className="w-full glass rounded-xl px-3 py-2 text-xs text-primary focus:border-[#caa95a] focus:outline-none"
+                className="w-full min-w-[10rem] glass-input rounded-lg px-3 py-2 text-xs text-primary"
               >
                 <option value="">{t.allDoctors}</option>
                 {(data?.filterOptions.doctors || []).map((d) => (
@@ -282,16 +284,15 @@ export default function ReportsPage() {
                 ))}
               </select>
             </div>
-          </div>
-
+          </FilterBar>
           {data && (
-            <p className="text-[11px] text-muted">
+            <p className="mt-3 text-[11px] text-muted">
               {t.showingPeriod}: <strong className="text-secondary">{data.period.from}</strong>
               {" → "}
               <strong className="text-secondary">{data.period.to}</strong>
             </p>
           )}
-        </div>
+        </PageSection>
 
         {isLoading ? (
           <div className="space-y-4" role="status" aria-label={t.loading}>
@@ -309,59 +310,39 @@ export default function ReportsPage() {
           <div className="glass-card rounded-2xl p-8 text-center text-xs text-muted">{t.empty}</div>
         ) : (
           <>
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-              <div className="glass-card rounded-2xl p-4 space-y-1">
-                <span className="text-[11px] text-secondary">{t.kpiVisits}</span>
-                <span className="block text-2xl font-mono font-bold text-primary">
-                  {data.totals.visits}
-                </span>
-                <span className="text-[10px] text-muted">
-                  {data.totals.patients} {t.uniquePatients}
-                </span>
-              </div>
-              <div className="glass-card rounded-2xl p-4 space-y-1">
-                <span className="text-[11px] text-secondary">{t.kpiCollected}</span>
-                <span className="block text-xl font-mono font-bold text-gold">
-                  {money(data.totals.grossCollectedEGP, currency)}
-                </span>
-                <span className="text-[10px] text-muted">
-                  {t.collectionRate}: {data.totals.collectionRatePercent}%
-                </span>
-              </div>
-              <div className="glass-card rounded-2xl p-4 space-y-1">
-                <span className="text-[11px] text-secondary">{t.kpiCaseCosts}</span>
-                <span className="block text-xl font-mono font-bold text-rose-500">
-                  {money(data.totals.caseCostsEGP ?? 0, currency)}
-                </span>
-                <span className="text-[10px] text-muted">
-                  {t.rowAfterCosts}: {money(data.totals.splitBasisEGP ?? 0, currency)}
-                </span>
-              </div>
-              <div className="glass-card rounded-2xl p-4 space-y-1">
-                <span className="text-[11px] text-secondary">{t.kpiClinic}</span>
-                <span className="block text-xl font-mono font-bold text-emerald-600">
-                  {money(data.totals.clinicShareEGP, currency)}
-                </span>
-                <span className="text-[10px] text-muted">
-                  {t.afterTeamReferrer}
-                </span>
-              </div>
-              <div className="glass-card rounded-2xl p-4 space-y-1 col-span-2 lg:col-span-1">
-                <span className="text-[11px] text-secondary">{t.kpiNewPatients}</span>
-                <span className="block text-2xl font-mono font-bold text-primary">
-                  {data.totals.newPatients}
-                </span>
-                <span className="text-[10px] text-muted">
-                  {t.avgCase}: {money(data.totals.avgPaidPerVisitEGP, currency)}
-                </span>
-              </div>
+            <div className="stat-grid-5">
+              <StatCard
+                label={t.kpiVisits}
+                value={data.totals.visits}
+                hint={`${data.totals.patients} ${t.uniquePatients}`}
+              />
+              <StatCard
+                label={t.kpiCollected}
+                value={money(data.totals.grossCollectedEGP, currency)}
+                hint={`${t.collectionRate}: ${data.totals.collectionRatePercent}%`}
+                tone="gold"
+              />
+              <StatCard
+                label={t.kpiCaseCosts}
+                value={money(data.totals.caseCostsEGP ?? 0, currency)}
+                hint={`${t.rowAfterCosts}: ${money(data.totals.splitBasisEGP ?? 0, currency)}`}
+                tone="rose"
+              />
+              <StatCard
+                label={t.kpiClinic}
+                value={money(data.totals.clinicShareEGP, currency)}
+                hint={t.afterTeamReferrer}
+                tone="emerald"
+              />
+              <StatCard
+                label={t.kpiNewPatients}
+                value={data.totals.newPatients}
+                hint={`${t.avgCase}: ${money(data.totals.avgPaidPerVisitEGP, currency)}`}
+                className="col-span-2 lg:col-span-1"
+              />
             </div>
 
-            <div className="glass-card rounded-2xl p-5 sm:p-6 space-y-4">
-              <div>
-                <h3 className="text-sm font-semibold text-primary">{t.moneyFlow}</h3>
-                <p className="text-[11px] text-muted mt-0.5">{t.moneyFlowHelp}</p>
-              </div>
+            <PageSection title={t.moneyFlow} description={t.moneyFlowHelp}>
               <div className="space-y-0 text-xs divide-y divide-[color-mix(in_srgb,var(--foreground)_8%,transparent)]">
                 <div className="flex items-center justify-between gap-3 py-2.5">
                   <span className="text-secondary">{t.rowCollected}</span>
@@ -383,7 +364,7 @@ export default function ReportsPage() {
                 </div>
                 <div className="flex items-center justify-between gap-3 py-2.5 ps-3 sm:ps-5">
                   <span className="text-secondary">
-                    {t.shareDoctor} (35%)
+                    {t.shareDoctor}
                   </span>
                   <span className="font-mono font-semibold text-primary">
                     {money(data.totals.doctorShareEGP, currency)}
@@ -414,13 +395,9 @@ export default function ReportsPage() {
                   </span>
                 </div>
               </div>
-            </div>
+            </PageSection>
 
-            <div className="glass-card rounded-2xl p-5 sm:p-6 space-y-4">
-              <div>
-                <h3 className="text-sm font-semibold text-primary">{t.caseDeductions}</h3>
-                <p className="text-[11px] text-muted mt-0.5">{t.caseDeductionsHelp}</p>
-              </div>
+            <PageSection title={t.caseDeductions} description={t.caseDeductionsHelp}>
               {(data.cases ?? []).length === 0 ? (
                 <p className="py-6 text-center text-xs text-muted">{t.noCaseCosts}</p>
               ) : (
@@ -609,14 +586,12 @@ export default function ReportsPage() {
                   </div>
                 </>
               )}
-            </div>
+            </PageSection>
 
-            <div className="glass-card rounded-2xl p-5 sm:p-6 space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div>
-                  <h3 className="text-sm font-semibold text-primary">{t.casesBySource}</h3>
-                  <p className="text-[11px] text-muted mt-0.5">{t.casesBySourceHelp}</p>
-                </div>
+            <PageSection
+              title={t.casesBySource}
+              description={t.casesBySourceHelp}
+              actions={
                 <div className="text-[11px] text-secondary">
                   <span className="me-3">
                     {t.ownedChannels}:{" "}
@@ -627,7 +602,8 @@ export default function ReportsPage() {
                     <strong className="text-primary">{data.insights.referrerChannelVisits}</strong>
                   </span>
                 </div>
-              </div>
+              }
+            >
 
               {data.bySource.length === 0 ? (
                 <p className="py-6 text-center text-xs text-muted">{t.noSourceData}</p>
@@ -680,18 +656,19 @@ export default function ReportsPage() {
                   ))}
                 </div>
               )}
-            </div>
+            </PageSection>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <div className="glass-card rounded-2xl p-5 sm:p-6 space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-primary">{t.revenueReport}</h3>
-                  {data.insights.peakDay && (
+              <PageSection
+                title={t.revenueReport}
+                actions={
+                  data.insights.peakDay ? (
                     <span className="text-[10px] text-muted">
                       {t.peakDay}: {data.insights.peakDay.date} ({data.insights.peakDay.visits})
                     </span>
-                  )}
-                </div>
+                  ) : undefined
+                }
+              >
                 {data.topProcedures.length === 0 ? (
                   <p className="py-8 text-center text-xs text-muted">{t.noProcedureData}</p>
                 ) : (
@@ -716,17 +693,18 @@ export default function ReportsPage() {
                     ))}
                   </div>
                 )}
-              </div>
+              </PageSection>
 
-              <div className="glass-card rounded-2xl p-5 sm:p-6 space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-primary">{t.doctorReport}</h3>
-                  {data.insights.peakMonth && (
+              <PageSection
+                title={t.doctorReport}
+                actions={
+                  data.insights.peakMonth ? (
                     <span className="text-[10px] text-muted">
                       {t.peakMonth}: {data.insights.peakMonth.month} ({data.insights.peakMonth.visits})
                     </span>
-                  )}
-                </div>
+                  ) : undefined
+                }
+              >
                 {data.byDoctor.length === 0 ? (
                   <p className="py-8 text-center text-xs text-muted">{t.empty}</p>
                 ) : (
@@ -754,11 +732,10 @@ export default function ReportsPage() {
                     ))}
                   </div>
                 )}
-              </div>
+              </PageSection>
             </div>
 
-            <div className="glass-card rounded-2xl p-5 sm:p-6 space-y-4">
-              <h3 className="text-sm font-semibold text-primary">{t.dailyProductivity}</h3>
+            <PageSection title={t.dailyProductivity}>
               {data.byDay.length === 0 ? (
                 <p className="py-8 text-center text-xs text-muted">{t.empty}</p>
               ) : (
@@ -781,11 +758,10 @@ export default function ReportsPage() {
                   ))}
                 </div>
               )}
-            </div>
+            </PageSection>
 
             {data.byMonth.length > 1 && (
-              <div className="glass-card rounded-2xl p-5 sm:p-6 space-y-4">
-                <h3 className="text-sm font-semibold text-primary">{t.monthlyProductivity}</h3>
+              <PageSection title={t.monthlyProductivity}>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {data.byMonth.map((m) => (
                     <div key={m.month} className="rounded-xl glass px-3 py-3 text-xs space-y-1">
@@ -800,7 +776,7 @@ export default function ReportsPage() {
                     </div>
                   ))}
                 </div>
-              </div>
+              </PageSection>
             )}
 
             {data.totals.outstandingEGP > 0 && (

@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { AppShell } from "../../../../components/layout/AppShell";
 import { Breadcrumb } from "../../../../components/layout/Breadcrumb";
+import { PageSection } from "../../../../components/layout/PageSection";
 import { Badge } from "../../../../components/ui/Badge";
 import { Button, ButtonLink } from "../../../../components/ui/Button";
 import { Modal } from "../../../../components/ui/Modal";
@@ -357,31 +358,27 @@ export default function PatientProfilePage() {
       <Tabs items={tabs} activeTab={activeTab} onChange={setActiveTab} />
 
       {activeTab === "overview" && (
-        <div className="space-y-6">
+        <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="glass-card rounded-2xl p-5 space-y-3">
-              <span className="text-xs font-semibold text-gold uppercase tracking-wider">
-                {t.nextAppointmentCard}
-              </span>
+            <PageSection title={t.nextAppointmentCard}>
               {patient.nextAppointment ? (
                 <p className="text-base font-bold text-primary">{patient.nextAppointment}</p>
               ) : (
                 <p className="text-xs text-secondary">{t.noUpcomingAppointment}</p>
               )}
-            </div>
+            </PageSection>
 
-            <div className="glass-card rounded-2xl p-5 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-gold uppercase tracking-wider">
-                  {t.lastVisitCard}
-                </span>
-                {latestVisit && (
+            <PageSection
+              title={t.lastVisitCard}
+              actions={
+                latestVisit ? (
                   <span className="text-xs text-secondary">
                     {latestVisit.date}
                     {latestVisit.time ? ` • ${latestVisit.time}` : ""}
                   </span>
-                )}
-              </div>
+                ) : undefined
+              }
+            >
               {latestVisit ? (
                 <div>
                   <p className="text-xs font-bold text-primary">
@@ -396,12 +393,11 @@ export default function PatientProfilePage() {
               ) : (
                 <p className="text-xs text-secondary">{t.noVisitsYet}</p>
               )}
-            </div>
+            </PageSection>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="md:col-span-2 glass-card rounded-2xl p-5 space-y-3">
-              <h3 className="text-sm font-semibold text-primary">{t.demographicsTitle}</h3>
+            <PageSection className="md:col-span-2" title={t.demographicsTitle}>
               <div className="grid grid-cols-2 gap-3 text-xs">
                 <div>
                   <span className="text-muted block">{t.homeAddress}</span>
@@ -424,10 +420,9 @@ export default function PatientProfilePage() {
                   </span>
                 </div>
               </div>
-            </div>
+            </PageSection>
 
-            <div className="glass-card rounded-2xl p-5 space-y-2">
-              <h3 className="text-sm font-semibold text-primary">{t.emergencyTitle}</h3>
+            <PageSection title={t.emergencyTitle}>
               <div className="text-xs space-y-1">
                 <p className="font-medium text-primary">
                   {displayValue(patient.emergencyContact?.name)}
@@ -439,12 +434,10 @@ export default function PatientProfilePage() {
                   {displayValue(patient.emergencyContact?.phone)}
                 </p>
               </div>
-            </div>
+            </PageSection>
           </div>
 
-          <div className="glass-card rounded-2xl p-5 sm:p-6 space-y-4">
-            <h3 className="text-sm font-semibold text-primary">{t.timelineTitle}</h3>
-
+          <PageSection title={t.timelineTitle}>
             {visits.length > 0 ? (
               <div className="relative ps-6 space-y-6 before:absolute before:start-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
                 {[...visits]
@@ -476,13 +469,12 @@ export default function PatientProfilePage() {
             ) : (
               <p className="text-xs text-secondary">{t.timelineEmpty}</p>
             )}
-          </div>
+          </PageSection>
         </div>
       )}
 
       {activeTab === "medical" && (
-        <div className="glass-card rounded-2xl p-5 sm:p-6 space-y-6">
-          <h3 className="text-sm font-semibold text-primary">{t.medicalHistoryTitle}</h3>
+        <PageSection title={t.medicalHistoryTitle}>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
             <div className="rounded-xl border border-rose-500/30 bg-rose-50 p-4 space-y-1.5">
@@ -517,18 +509,16 @@ export default function PatientProfilePage() {
           </div>
 
           {patient.medicalHistory?.additionalNotes?.trim() && (
-            <div className="glass rounded-xl p-4 space-y-1.5 text-xs">
+            <div className="glass rounded-xl p-4 space-y-1.5 text-xs mt-4">
               <span className="font-bold text-secondary block">{t.clinicalNotesLabel}</span>
               <p className="text-primary">{patient.medicalHistory.additionalNotes}</p>
             </div>
           )}
-        </div>
+        </PageSection>
       )}
 
       {activeTab === "dental" && (
-        <div className="glass-card rounded-2xl p-5 sm:p-6 space-y-6">
-          <h3 className="text-sm font-semibold text-primary">{t.dentalHistoryTitle}</h3>
-
+        <PageSection title={t.dentalHistoryTitle}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
             <div className="glass rounded-xl p-4 space-y-1.5">
               <span className="font-bold text-gold block">{t.previousTreatments}</span>
@@ -555,7 +545,7 @@ export default function PatientProfilePage() {
               </p>
             </div>
           </div>
-        </div>
+        </PageSection>
       )}
 
       {activeTab === "visits" && (
